@@ -1,2 +1,2 @@
 pyTelegramBotAPI
-"dublib>=0.13,<=0.15"
+"dublib>=0.13,<=0.16"

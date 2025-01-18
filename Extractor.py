@@ -26,7 +26,7 @@ def GenerateExtractFile(filename: str, users: list[UserData]):
 	for User in users:
 		WorkSheet.write(Number + 1, 0, Number + 1)
 		WorkSheet.write(Number + 1, 1, User.username)
-		# WorkSheet.write(Number + 1, 3, User.phone_number)
+		# WorkSheet.write(Number + 1, 2, User.phone_number)
 		IsPremium = str(User.is_premium).lower()
 		Format = Green if User.is_premium else Red
 		WorkSheet.write(Number + 1, 3, IsPremium, Format)
