@@ -1,2 +1,3 @@
 pyTelegramBotAPI
-"dublib>=0.13,<=0.16"
+dublib>=0.13,<=0.16
+xlsxwriter
