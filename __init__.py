@@ -73,6 +73,24 @@ class Decorators:
 						text = "Доступ запрещён."
 					)
 
+	def files(self, bot: TeleBot, users: UsersManager):
+		"""
+		Набор декораторов: файлы.
+			bot – экземпляр бота;\n
+			users – менеджер пользователей.
+		"""
+
+		@bot.message_handler(content_types = ["audio", "document", "photo", "video"])
+		def Files(Message: types.Message):
+			User = users.auth(Message.from_user)
+
+			if User.has_permissions("admin") and User.expected_type == UserInput.Message.value:
+				if Message.caption: User.set_property("mailing_caption", Message.html_caption)
+				if Message.content_type == "audio": User.get_property("mailing_content").append({"type": "audio", "file_id": Message.audio.file_id})
+				elif Message.content_type == "document": User.get_property("mailing_content").append({"type": "document", "file_id": Message.document.file_id})
+				elif Message.content_type == "video": User.get_property("mailing_content").append({"type": "video", "file_id": Message.video.file_id})
+				elif Message.content_type == "photo": User.get_property("mailing_content").append({"type": "photo", "file_id": Message.photo[-1].file_id})
+
 	def inline_keyboards(self, bot: TeleBot = None, users: UsersManager = None):
 		"""
 		Набор декораторов: Inline-кнопки.
