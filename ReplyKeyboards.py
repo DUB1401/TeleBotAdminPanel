@@ -4,12 +4,7 @@ from telebot import types
 class ReplyKeyboards:
 	"""Генератор Reply-интерфейса."""
 
-	def __init__(self):
-		"""Генератор Reply-интерфейса."""
-
-		pass
-
-	def admin(self) -> types.ReplyKeyboardMarkup:
+	def admin() -> types.ReplyKeyboardMarkup:
 		"""Строит кнопочный интерфейс: панель управления."""
 
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
@@ -20,7 +15,7 @@ class ReplyKeyboards:
 
 		return Menu
 
-	def cancel(self) -> types.ReplyKeyboardMarkup:
+	def cancel() -> types.ReplyKeyboardMarkup:
 		"""Строит кнопочный интерфейс: отмена."""
 
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
@@ -29,7 +24,7 @@ class ReplyKeyboards:
 
 		return Menu
 	
-	def editing(self) -> types.ReplyKeyboardMarkup:
+	def editing() -> types.ReplyKeyboardMarkup:
 		"""Строит кнопочный интерфейс: редактирование сообщения."""
 
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
@@ -39,14 +34,16 @@ class ReplyKeyboards:
 
 		return Menu
 	
-	def mailing(self, user: UserData) -> types.ReplyKeyboardMarkup:
+	def mailing(user: UserData) -> types.ReplyKeyboardMarkup:
 		"""
 		Строит кнопочный интерфейс: рассылка.
 			user – администратор.
 		"""
 
-		ButtonText = "Удалить" if user.get_property("button_link") else "Добавить"
-		Status = "🔴 Остановить" if user.get_property("mailing") else "🟢 Запустить"
+		Options = user.get_property("ap")
+
+		ButtonText = "Удалить" if Options["button_link"] else "Добавить"
+		Status = "🔴 Остановить" if Options["mailing"] else "🟢 Запустить"
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
 		Start = types.KeyboardButton(Status)
 		Sampling = types.KeyboardButton("🎯 Выборка")

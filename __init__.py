@@ -18,11 +18,6 @@ import os
 class Decorators:
 	"""Наборы декораторов."""
 
-	def __init__(self):
-		"""Наборы декораторов."""
-
-		pass
-
 	def commands(self, bot: TeleBot, users: UsersManager, password: str):
 		"""
 		Набор декораторов: команды.
@@ -34,12 +29,15 @@ class Decorators:
 		@bot.message_handler(commands = ["admin"])
 		def CommandAdmin(Message: types.Message):
 			User = users.auth(Message.from_user)
-			User.set_property("mailing_caption", None, force = False)
-			User.set_property("mailing_content", [], force = False)
-			User.set_property("button_label", None, force = False)
-			User.set_property("button_link", None, force = False)
-			User.set_property("sampling", None, force = False)
-			User.set_property("mailing", False, force = False)
+			Options = {
+				"mailing_caption": None,
+				"mailing_content": [],
+				"button_label": None,
+				"button_link": None,
+				"sampling": None,
+				"mailing": False
+			}
+			User.set_property("ap", Options, force = False)
 			MessageWords = Message.text.split(" ")
 
 			if not User.has_permissions("admin") and len(MessageWords) == 2:
@@ -49,7 +47,7 @@ class Decorators:
 					bot.send_message(
 						chat_id = Message.chat.id,
 						text = "Пароль принят. Доступ разрешён.",
-						reply_markup = ReplyKeyboards().admin()
+						reply_markup = ReplyKeyboards.admin()
 					)
 
 				else:
@@ -64,7 +62,7 @@ class Decorators:
 					bot.send_message(
 						chat_id = Message.chat.id,
 						text = "Доступ разрешён.",
-						reply_markup = ReplyKeyboards().admin()
+						reply_markup = ReplyKeyboards.admin()
 					)
 
 				else:
@@ -83,13 +81,18 @@ class Decorators:
 		@bot.message_handler(content_types = ["audio", "document", "photo", "video"])
 		def Files(Message: types.Message):
 			User = users.auth(Message.from_user)
+			Options = User.get_property("ap")
 
 			if User.has_permissions("admin") and User.expected_type == UserInput.Message.value:
-				if Message.caption: User.set_property("mailing_caption", Message.html_caption)
-				if Message.content_type == "audio": User.get_property("mailing_content").append({"type": "audio", "file_id": Message.audio.file_id})
-				elif Message.content_type == "document": User.get_property("mailing_content").append({"type": "document", "file_id": Message.document.file_id})
-				elif Message.content_type == "video": User.get_property("mailing_content").append({"type": "video", "file_id": Message.video.file_id})
-				elif Message.content_type == "photo": User.get_property("mailing_content").append({"type": "photo", "file_id": Message.photo[-1].file_id})
+				
+				if Message.caption:
+					Options["mailing_caption"] = Message.html_caption
+					User.set_property("ap", Options)
+
+				if Message.content_type == "audio": Options["mailing_content"].append({"type": "audio", "file_id": Message.audio.file_id})
+				elif Message.content_type == "document": Options["mailing_content"].append({"type": "document", "file_id": Message.document.file_id})
+				elif Message.content_type == "video": Options["mailing_content"].append({"type": "video", "file_id": Message.video.file_id})
+				elif Message.content_type == "photo": Options["mailing_content"].append({"type": "photo", "file_id": Message.photo[-1].file_id})
 
 	def inline_keyboards(self, bot: TeleBot = None, users: UsersManager = None):
 		"""
@@ -101,22 +104,21 @@ class Decorators:
 		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_sampling"))
 		def InlineButton(Call: types.CallbackQuery):
 			User = users.auth(Call.from_user)
-			if Call.data.endswith("all"): User.set_property("sampling", None)
-			if Call.data.endswith("last"): User.set_property("sampling", 1000)
+			Options = User.get_property("ap")
+			if Call.data.endswith("all"): Options["sampling"] = None
+			if Call.data.endswith("last"): Options["sampling"] = 1000
+			User.set_property("ap", Options)
+
 			bot.answer_callback_query(Call.id)
-			bot.delete_message(
-				chat_id = User.id,
-				message_id = Call.message.id
-			)
+			bot.delete_message(chat_id = User.id, message_id = Call.message.id)
 
 			if not Call.data.endswith("cancel"): bot.send_message(
 				chat_id = User.id,
 				text = "Выборка установлена.",
-				reply_markup = ReplyKeyboards().mailing(User)
+				reply_markup = ReplyKeyboards.mailing(User)
 			)
 				
-			else:
-				User.set_expected_type(None)
+			else: User.set_expected_type(None)
 
 		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_extract"))
 		def InlineButton(Call: types.CallbackQuery):
@@ -147,10 +149,12 @@ class Decorators:
 		@bot.message_handler(content_types = ["photo"])
 		def Photo(Message: types.Message):
 			User = users.auth(Message.from_user)
+			Options = User.get_property("ap")
 
 			if User.has_permissions("admin") and User.expected_type == "message":
-				if Message.caption: User.set_property("mailing_caption", Message.html_caption)
-				User.get_property("mailing_content").append({"type": "photo", "file_id": Message.photo[-1].file_id})
+				if Message.caption: Options["mailing_caption"] = Message.html_caption
+				Options["mailing_content"].append({"type": "photo", "file_id": Message.photo[-1].file_id})
+				User.set_property("ap", Options)
 
 	def reply_keyboards(self, bot: TeleBot, users: UsersManager):
 		"""
@@ -167,7 +171,7 @@ class Decorators:
 				chat_id = Message.chat.id,
 				text = f"*Укажите выборку*\n\nТекущее количество пользователей: {len(users.users)}",
 				parse_mode = "MarkdownV2",
-				reply_markup = InlineKeyboards().sampling(User)
+				reply_markup = InlineKeyboards.sampling(User)
 			)
 
 		@bot.message_handler(content_types = ["text"], regexp = "🕹️ Добавить кнопку")
@@ -177,18 +181,17 @@ class Decorators:
 			bot.send_message(
 				chat_id = Message.chat.id,
 				text = "Введите подпись для кнопки.",
-				reply_markup = ReplyKeyboards().cancel()
+				reply_markup = ReplyKeyboards.cancel()
 			)
 
 		@bot.message_handler(content_types = ["text"], regexp = "✅ Завершить")
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
 			User.set_expected_type(None)
-			User.clear_temp_properties()
 			bot.send_message(
 				chat_id = Message.chat.id,
 				text = "Сообщение сохранено.",
-				reply_markup = ReplyKeyboards().mailing(User)
+				reply_markup = ReplyKeyboards.mailing(User)
 			)
 
 		@bot.message_handler(content_types = ["text"], regexp = "❌ Закрыть")
@@ -204,15 +207,15 @@ class Decorators:
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
 			User.set_object("mailer", Mailer(bot))
-			
-			if not User.get_property("mailing_caption") and not User.get_property("mailing_content"):
+			Options = User.get_property("ap")
+
+			if not Options["mailing_caption"] and not Options["mailing_content"]:
 				bot.send_message(
 					chat_id = Message.chat.id,
 					text = "Вы не задали сообщение для рассылки."
 				)
 
-			else:
-				User.get_object("mailer").start_mailing(User, users)
+			else: User.get_object("mailer").start_mailing(User, users)
 
 		@bot.message_handler(content_types = ["text"], regexp = "↩️ Назад")
 		def Button(Message: types.Message):
@@ -220,46 +223,50 @@ class Decorators:
 			bot.send_message(
 				chat_id = Message.chat.id,
 				text = "Панель управления.",
-				reply_markup = ReplyKeyboards().admin()
+				reply_markup = ReplyKeyboards.admin()
 			)
 
 		@bot.message_handler(content_types = ["text"], regexp = "❌ Отмена")
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
+			
+			if User.expected_type == UserInput.Message.value:
+				Options = User.get_property("ap")
+				User.set_expected_type(UserInput.Message.value)
+				Caption = Options["temp_mailing_caption"]
+				Content = Options["temp_mailing_content"]
+				Options["mailing_caption"] = Caption
+				Options["mailing_content"] = Content
+				del Options["temp_mailing_caption"]
+				del Options["temp_mailing_content"]
+				User.set_property("ap", Options)
+
 			User.set_expected_type(None)
-
-			try:
-				Caption = User.get_property("temp_mailing_caption")
-				Content = User.get_property("temp_mailing_content")
-				User.clear_temp_properties()
-				User.set_property("mailing_caption", Caption)
-				User.set_property("mailing_content", Content)
-				
-			except: pass
-
 			bot.send_message(
 				chat_id = Message.chat.id,
 				text = "Действие отменено.",
-				reply_markup = ReplyKeyboards().mailing(User)
+				reply_markup = ReplyKeyboards.mailing(User)
 			)
 
 		@bot.message_handler(content_types = ["text"], regexp = "🔴 Остановить")
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
-			User.set_property("mailing", None)
+			Options = User.get_property("ap")
+			Options["mailing"] = None
+			User.set_property("ap", Options)
 
 		@bot.message_handler(content_types = ["text"], regexp = "🔎 Просмотр")
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
-			
-			if not User.get_property("mailing_caption") and not User.get_property("mailing_content"):
+			Options = User.get_property("ap")
+
+			if not Options["mailing_caption"] and not Options["mailing_content"]:
 				bot.send_message(
 					chat_id = Message.chat.id,
 					text = "Вы не задали сообщение для рассылки."
 				)
 
-			else:
-				Mailer(bot).send_message(User, User)
+			else: Mailer(bot).send_message(User, User)
 
 		@bot.message_handler(content_types = ["text"], regexp = "👤 Рассылка")
 		def Button(Message: types.Message):
@@ -267,23 +274,25 @@ class Decorators:
 			bot.send_message(
 				chat_id = Message.chat.id,
 				text = "Управление рассылкой.",
-				reply_markup = ReplyKeyboards().mailing(User)
+				reply_markup = ReplyKeyboards.mailing(User)
 			)
 
 		@bot.message_handler(content_types = ["text"], regexp = "✏️ Редактировать")
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
+			Options = User.get_property("ap")
 			User.set_expected_type(UserInput.Message.value)
-			Caption = User.get_property("mailing_caption")
-			Content = User.get_property("mailing_content")
-			User.set_temp_property("temp_mailing_caption", Caption)
-			User.set_temp_property("temp_mailing_content", Content)
-			User.set_property("mailing_caption", None)
-			User.set_property("mailing_content", [])
+			Caption = Options["mailing_caption"]
+			Content = Options["mailing_content"]
+			Options["temp_mailing_caption"] = Caption
+			Options["temp_mailing_content"] = Content
+			Options["mailing_caption"] = None
+			Options["mailing_content"] = list()
+			User.set_property("ap", Options)
 			bot.send_message(
 				chat_id = Message.chat.id,
 				text = "Отправьте сообщение, которое будет использоваться в рассылке.\n\nЕсли вы прикрепляете несколько вложений, для их упорядочивания рекомендуется выполнять загрузку файлов последовательно.",
-				reply_markup = ReplyKeyboards().editing()
+				reply_markup = ReplyKeyboards.editing()
 			)
 
 		@bot.message_handler(content_types = ["text"], regexp = "📊 Статистика")
@@ -306,12 +315,14 @@ class Decorators:
 		@bot.message_handler(content_types = ["text"], regexp = "🕹️ Удалить кнопку")
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
-			User.set_property("button_label", None)
-			User.set_property("button_link", None)
+			Options = User.get_property("ap")
+			Options["button_label"] = None
+			Options["button_link"] = None
+			User.set_property("ap", Options)
 			bot.send_message(
 				chat_id = Message.chat.id,
 				text = "Кнопка удалена.",
-				reply_markup = ReplyKeyboards().mailing(User)
+				reply_markup = ReplyKeyboards.mailing(User)
 			)
 
 class Keyboards:
@@ -331,15 +342,10 @@ class Keyboards:
 		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Inline = InlineKeyboards()
-		self.__Reply = ReplyKeyboards()
+		self.__Reply = ReplyKeyboards
 
 class Procedures:
 	"""Наборы процедур."""
-
-	def __init__(self):
-		"""Наборы процедур."""
-
-		pass
 
 	def text(self, bot: TeleBot, user: UserData, message: types.Message) -> bool:
 		"""
@@ -350,30 +356,34 @@ class Procedures:
 		"""
 
 		if user.has_permissions("admin") and user.expected_type:
+			Options = user.get_property("ap")
 
 			if user.expected_type == UserInput.Message.value:
-				user.set_property("mailing_caption", message.html_text)
+				Options["mailing_caption"] = message.html_text
+				user.set_property("ap", Options)
 
 				return True
 
 			if user.expected_type == UserInput.ButtonLabel.value:
-				user.set_property("button_label", message.text)
+				Options["button_label"] = message.text
+				user.set_property("ap", Options)
 				user.set_expected_type(UserInput.ButtonLink.value)
 				bot.send_message(
 					chat_id = message.chat.id,
 					text = "Отправьте ссылку, которая будет помещена в кнопку.",
-					reply_markup = ReplyKeyboards().cancel()
+					reply_markup = ReplyKeyboards.cancel()
 				)
 
 				return True
 			
 			if user.expected_type == UserInput.ButtonLink.value:
-				user.set_property("button_link", message.text)
+				Options["button_link"] = message.text
+				user.set_property("ap", Options)
 				user.set_expected_type(None)
 				bot.send_message(
 					chat_id = message.chat.id,
 					text = "Кнопка прикреплена к сообщению.",
-					reply_markup = ReplyKeyboards().mailing(user)
+					reply_markup = ReplyKeyboards.mailing(user)
 				)
 
 				return True
@@ -387,17 +397,18 @@ class Procedures:
 		"""
 
 		if user.has_permissions("admin") and user.expected_type == UserInput.Message.value:
-			if message.caption: user.set_property("mailing_caption", message.html_caption)
-			if message.content_type == "audio": user.get_property("mailing_content").append({"type": "audio", "file_id": message.audio.file_id})
-			elif message.content_type == "document": user.get_property("mailing_content").append({"type": "document", "file_id": message.document.file_id})
-			elif message.content_type == "video": user.get_property("mailing_content").append({"type": "video", "file_id": message.video.file_id})
-			elif message.content_type == "photo": user.get_property("mailing_content").append({"type": "photo", "file_id": message.photo[-1].file_id})
+			Options = user.get_property("ap")
+			if message.caption: Options["mailing_caption"] = message.html_caption
+			if message.content_type == "audio": Options["mailing_content"].append({"type": "audio", "file_id": message.audio.file_id})
+			elif message.content_type == "document": Options["mailing_content"].append({"type": "document", "file_id": message.document.file_id})
+			elif message.content_type == "video": Options["mailing_content"].append({"type": "video", "file_id": message.video.file_id})
+			elif message.content_type == "photo": Options["mailing_content"].append({"type": "photo", "file_id": message.photo[-1].file_id})
 
 class UserInput(enum.Enum):
-	ButtonLabel = "button_label"
-	ButtonLink = "button_link"
-	Message = "message"
-	Sampling = "sampling"
+	ButtonLabel = "ap_button_label"
+	ButtonLink = "ap_button_link"
+	Message = "ap_message"
+	Sampling = "ap_sampling"
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #

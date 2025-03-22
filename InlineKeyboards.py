@@ -5,11 +5,6 @@ from telebot import types
 class InlineKeyboards:
 	"""Генератор Inline-интерфейса."""
 
-	def __init__(self):
-		"""Генератор Inline-интерфейса."""
-
-		pass
-
 	def extract():
 		"""Строит Inline-интерфейс: выгрузка."""
 

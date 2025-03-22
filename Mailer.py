@@ -59,7 +59,7 @@ class Mailer:
 		self.__Bot.send_message(
 			chat_id = admin.id,
 			text = "Рассылка начата.",
-			reply_markup = ReplyKeyboards().mailing(admin)
+			reply_markup = ReplyKeyboards.mailing(admin)
 		)
 		MessageID = self.__Bot.send_message(
 			chat_id = admin.id,
@@ -67,20 +67,21 @@ class Mailer:
 			parse_mode = "MarkdownV2"
 		).id
 
+		Options = admin.get_property("ap")
+
 		for Index in range(len(targets)):
-			
-			if admin.get_property("mailing") == None:
-				admin.set_property("mailing", False)
-				break
+			if Options["mailing"] == None: break
 
 			try:
 				if not targets[Index].is_chat_forbidden: self.send_message(admin, targets[Index])
 
 			except: Errors += 1
-
 			else: Sended += 1
 
 			Progress = (Sended + Errors) / len(targets) * 100
+			Progress = round(Progress, 2)
+			if str(Progress).endswith(".0"): Progress = int(Progress)
+			
 			self.__Bot.edit_message_text(
 				chat_id = admin.id,
 				message_id = MessageID,
@@ -89,11 +90,13 @@ class Mailer:
 			)
 			sleep(0.1)
 
-		admin.set_property("mailing", False)
+		Options["mailing"] = False
+		admin.set_property("ap", Options)
+
 		self.__Bot.send_message(
 			chat_id = admin.id,
 			text = "Рассылка завершена.",
-			reply_markup = ReplyKeyboards().mailing(admin)
+			reply_markup = ReplyKeyboards.mailing(admin)
 		)
 
 	#==========================================================================================#
@@ -118,10 +121,11 @@ class Mailer:
 			user – целевой пользователь.
 		"""
 
-		Text = admin.get_property("mailing_caption")
-		Files = admin.get_property("mailing_content")
-		ButtonLabel = admin.get_property("button_label")
-		ButtonLink = admin.get_property("button_link")
+		Options = admin.get_property("ap")
+		Text = Options["mailing_caption"]
+		Files = Options["mailing_content"]
+		ButtonLabel = Options["button_label"]
+		ButtonLink = Options["button_link"]
 		SendMethods = {
 			"photo": self.__Bot.send_photo,
 			"video": self.__Bot.send_video,
@@ -165,19 +169,17 @@ class Mailer:
 			users_manager – менеджер управления пользователями.
 		"""
 
-		Sampling = admin.get_property("sampling")
+		Options = admin.get_property("ap")
+		Sampling = Options["sampling"]
 		Targets = None
 
 		if type(Sampling) == int:
-
-			try:
-				Targets = random.sample(users_manager.users, Sampling)
-			
+			try: Targets = random.sample(users_manager.users, Sampling)
 			except ValueError: Targets = users_manager.users
 
-		elif Sampling == None:
-			Targets = users_manager.users
+		elif Sampling == None: Targets = users_manager.users
 
-		admin.set_property("mailing", True)
+		Options["mailing"] = True
+		admin.set_property("ap", Options)
 		self.__MailingThread = Thread(target = self.__Mailing, args = [admin, Targets])
 		self.__MailingThread.start()
