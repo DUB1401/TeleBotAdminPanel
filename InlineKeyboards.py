@@ -25,6 +25,8 @@ class InlineKeyboards:
 		#---> Генерация кнопочного интерфейса.
 		#==========================================================================================#
 		Menu = types.InlineKeyboardMarkup()
+		OneUser = types.InlineKeyboardButton("Одному пользователю", callback_data = "ap_one_user")
+		Menu.add(OneUser, row_width = 1)
 		LastSampling = types.InlineKeyboardButton("1K", callback_data = "ap_sampling_last")
 		AllSampling = types.InlineKeyboardButton("Все", callback_data = "ap_sampling_all")
 		Cancel = types.InlineKeyboardButton("Отмена", callback_data = "ap_sampling_cancel")

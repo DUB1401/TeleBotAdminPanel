@@ -139,6 +139,13 @@ class Decorators:
 
 			except Exception as ExceptionData: print(ExceptionData)
 
+		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_one_user"))
+		def InlineButton(Call: types.CallbackQuery):
+			User = users.auth(Call.from_user)
+			bot.send_message(User.id, "Отправьте полный ник пользователя или ссылку на него.", reply_markup = ReplyKeyboards.cancel())
+			User.set_expected_type(UserInput.Username.value)
+			bot.answer_callback_query(Call.id)
+
 	def photo(self, bot: TeleBot, users: UsersManager):
 		"""
 		Набор декораторов: фото.
@@ -167,10 +174,17 @@ class Decorators:
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
 			User.set_expected_type(UserInput.Sampling.value)
+			Options = User.get_property("ap")
+			Sampling = Options["sampling"]
+
+			if type(Sampling) == int: Sampling = f"<i>{Sampling} пользователей</i>"
+			elif type(Sampling) == str: Sampling = f"@{Sampling}"
+			elif Sampling == None: Sampling = "🚫"
+
 			bot.send_message(
 				chat_id = Message.chat.id,
-				text = f"*Укажите выборку*\n\nТекущее количество пользователей: {len(users.users)}",
-				parse_mode = "MarkdownV2",
+				text = f"<b>Укажите выборку</b>\n\nТекущее количество пользователей: {len(users.users)}\nТекущая выборка: {Sampling}",
+				parse_mode = "HTML",
 				reply_markup = InlineKeyboards.sampling(User)
 			)
 
@@ -355,38 +369,50 @@ class Procedures:
 			message – сообщение.
 		"""
 
-		if user.has_permissions("admin") and user.expected_type:
-			Options = user.get_property("ap")
+		if not user.expected_type: return False
+		elif not user.expected_type.startswith("ap_"): return False
+		elif not user.has_permissions("admin"): return False
 
-			if user.expected_type == UserInput.Message.value:
-				Options["mailing_caption"] = message.html_text
-				user.set_property("ap", Options)
+		Options = user.get_property("ap")
 
-				return True
+		if user.expected_type == UserInput.Message.value:
+			Options["mailing_caption"] = message.html_text
+			user.set_property("ap", Options)
 
-			if user.expected_type == UserInput.ButtonLabel.value:
-				Options["button_label"] = message.text
-				user.set_property("ap", Options)
-				user.set_expected_type(UserInput.ButtonLink.value)
-				bot.send_message(
-					chat_id = message.chat.id,
-					text = "Отправьте ссылку, которая будет помещена в кнопку.",
-					reply_markup = ReplyKeyboards.cancel()
-				)
+		elif user.expected_type == UserInput.ButtonLabel.value:
+			Options["button_label"] = message.text
+			user.set_property("ap", Options)
+			user.set_expected_type(UserInput.ButtonLink.value)
+			bot.send_message(
+				chat_id = message.chat.id,
+				text = "Отправьте ссылку, которая будет помещена в кнопку.",
+				reply_markup = ReplyKeyboards.cancel()
+			)
+		
+		elif user.expected_type == UserInput.ButtonLink.value:
+			Options["button_link"] = message.text
+			user.set_property("ap", Options)
+			user.set_expected_type(None)
+			bot.send_message(
+				chat_id = message.chat.id,
+				text = "Кнопка прикреплена к сообщению.",
+				reply_markup = ReplyKeyboards.mailing(user)
+			)
+		
+		elif user.expected_type == UserInput.Username.value:
+			Username = message.text.lstrip("@")
+			if Username.startswith("https://t.me/"): Username = Username[len("https://t.me/"):]
 
-				return True
-			
-			if user.expected_type == UserInput.ButtonLink.value:
-				Options["button_link"] = message.text
-				user.set_property("ap", Options)
-				user.set_expected_type(None)
-				bot.send_message(
-					chat_id = message.chat.id,
-					text = "Кнопка прикреплена к сообщению.",
-					reply_markup = ReplyKeyboards.mailing(user)
-				)
+			Options["sampling"] = Username
+			user.set_property("ap", Options)
+			user.set_expected_type(None)
+			bot.send_message(
+				chat_id = message.chat.id,
+				text = "Никнейм сохранён.",
+				reply_markup = ReplyKeyboards.mailing(user)
+			)
 
-				return True
+		return True
 
 	def files(self, bot: TeleBot, user: UserData = None, message: types.Message = None):
 		"""
@@ -409,7 +435,8 @@ class UserInput(enum.Enum):
 	ButtonLink = "ap_button_link"
 	Message = "ap_message"
 	Sampling = "ap_sampling"
-
+	Username = "ap_username"
+	
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#

@@ -177,6 +177,22 @@ class Mailer:
 			try: Targets = random.sample(users_manager.users, Sampling)
 			except ValueError: Targets = users_manager.users
 
+		elif type(Sampling) == str:
+			IsSended = False
+
+			for User in users_manager.users:
+
+				if User.username == Sampling: 
+					try: self.send_message(admin, User)
+					except: User.set_chat_forbidden(True)
+					else: IsSended = True
+					break
+
+			if IsSended: self.__Bot.send_message(admin.id, f"✅ Сообщение отправлено пользователю @{Sampling}.")
+			else: self.__Bot.send_message(admin.id, f"❌ Не удалось отправить сообщение пользователю @{Sampling}.")
+
+			return
+
 		elif Sampling == None: Targets = users_manager.users
 
 		Options["mailing"] = True
