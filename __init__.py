@@ -312,17 +312,32 @@ class Decorators:
 		@bot.message_handler(content_types = ["text"], regexp = "📊 Статистика")
 		def Button(Message: types.Message):
 			User = users.auth(Message.from_user)
-			PremiumUsersCount = len(users.premium_users)
+
 			UsersCount = len(users.users)
 			BlockedUsersCount = 0
 
 			for user in users.users:
 				if user.is_chat_forbidden: BlockedUsersCount += 1
 
+			Counts = [len(users.premium_users), len(users.get_active_users()), BlockedUsersCount]
+			Percentages = [None, None, None]
+
+			for Index in range(len(Counts)):
+				Percentages[Index] = round(Counts[Index] / UsersCount * 100, 1)
+				if str(Percentages[Index]).endswith(".0"): Percentages[Index] = int(Percentages[Index])
+
+			Text = (
+				"<b>📊 Статистика</b>\n",
+				f"👤 Всего пользователей: <b>{UsersCount}</b>",
+				f"⭐ Из них Premium: <b>{Counts[0]}</b> (<i>{Percentages[0]}%</i>)",
+				f"🧩 Активных за сутки: <b>{Counts[1]}</b> (<i>{Percentages[1]}%</i>)",
+				f"⛔ Заблокировали: <b>{Counts[2]}</b> (<i>{Percentages[2]}%</i>)"
+			)
+
 			bot.send_message(
 				chat_id = Message.chat.id,
-				text = f"*📊 Статистика*\n\n👤 Всего пользователей: {UsersCount}\n⭐ Из них Premium: {PremiumUsersCount}\n⛔ Заблокировали: {BlockedUsersCount}",
-				parse_mode = "MarkdownV2",
+				text = "\n".join(Text),
+				parse_mode = "HTML",
 				reply_markup = InlineKeyboards.extract() 
 			)
 
@@ -346,9 +361,13 @@ class Keyboards:
 	def inline(self) -> types.InlineKeyboardMarkup:
 		"""Inline-разметки кнопок."""
 
+		return self.__Inline
+
 	@property
 	def reply(self) -> types.ReplyKeyboardMarkup:
 		"""Reply-разметки кнопок."""
+
+		return self.__Reply
 
 	def __init__(self):
 		"""Контейнер разметок кнопок."""
