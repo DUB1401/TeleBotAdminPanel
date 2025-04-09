@@ -123,7 +123,7 @@ class Decorators:
 		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_extract"))
 		def InlineButton(Call: types.CallbackQuery):
 			User = users.auth(Call.from_user)
-			Date = datetime.now().date().strftime("%m.%d.%Y")
+			Date = datetime.now().date().strftime("%d.%m.%Y")
 			Filename = f"{Date}.xlsx"
 			GenerateExtractFile(Filename, users.users)
 
