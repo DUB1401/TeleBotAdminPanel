@@ -1,6 +1,6 @@
 from .InlineKeyboards import InlineKeyboards
-from .Extractor import GenerateExtractFile
 from .ReplyKeyboards import ReplyKeyboards
+from .Extractor import Extractor
 from .Mailer import Mailer
 
 from dublib.TelebotUtils import UserData, UsersManager
@@ -125,7 +125,7 @@ class Decorators:
 			User = users.auth(Call.from_user)
 			Date = datetime.now().date().strftime("%d.%m.%Y")
 			Filename = f"{Date}.xlsx"
-			GenerateExtractFile(Filename, users.users)
+			Extractor().generate_file(Filename, users.users)
 
 			try:
 				bot.delete_message(User.id, Call.message.id)
