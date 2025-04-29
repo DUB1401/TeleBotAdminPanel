@@ -1,15 +1,15 @@
+from .ReplyKeyboards import ReplyFunctions, ReplyTemplates
+from .ReplyKeyboards.Mailing import MailingReplyTemplates
 from .InlineKeyboards import InlineKeyboards
-from .ReplyKeyboards import ReplyKeyboards
 from .Extractor import Extractor
-from .Mailer import Mailer
+from .Structs import UserInput
 
 from dublib.TelebotUtils import UserData, UsersManager
 
-from telebot import TeleBot, types
 from datetime import datetime
-
-import enum
 import os
+
+from telebot import TeleBot, types
 
 #==========================================================================================#
 # >>>>> СТРУКТУРЫ <<<<< #
@@ -30,6 +30,7 @@ class Decorators:
 		def CommandAdmin(Message: types.Message):
 			User = users.auth(Message.from_user)
 			Options = {
+				"is_open": True,
 				"mailing_caption": None,
 				"mailing_content": [],
 				"button_label": None,
@@ -38,6 +39,11 @@ class Decorators:
 				"mailing": False
 			}
 			User.set_property("ap", Options, force = False)
+
+			Options = User.get_property("ap")
+			Options["is_open"] = True
+			User.set_property("ap", Options)
+
 			MessageWords = Message.text.split(" ")
 
 			if not User.has_permissions("admin") and len(MessageWords) == 2:
@@ -47,7 +53,7 @@ class Decorators:
 					bot.send_message(
 						chat_id = Message.chat.id,
 						text = "Пароль принят. Доступ разрешён.",
-						reply_markup = ReplyKeyboards.admin()
+						reply_markup = ReplyTemplates.admin()
 					)
 
 				else:
@@ -62,7 +68,7 @@ class Decorators:
 					bot.send_message(
 						chat_id = Message.chat.id,
 						text = "Доступ разрешён.",
-						reply_markup = ReplyKeyboards.admin()
+						reply_markup = ReplyTemplates.admin()
 					)
 
 				else:
@@ -115,7 +121,7 @@ class Decorators:
 			if not Call.data.endswith("cancel"): bot.send_message(
 				chat_id = User.id,
 				text = "Выборка установлена.",
-				reply_markup = ReplyKeyboards.mailing(User)
+				reply_markup = MailingReplyTemplates.mailing(User)
 			)
 				
 			else: User.set_expected_type(None)
@@ -142,7 +148,7 @@ class Decorators:
 		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_one_user"))
 		def InlineButton(Call: types.CallbackQuery):
 			User = users.auth(Call.from_user)
-			bot.send_message(User.id, "Отправьте полный ник пользователя или ссылку на него.", reply_markup = ReplyKeyboards.cancel())
+			bot.send_message(User.id, "Отправьте полный ник пользователя или ссылку на него.", reply_markup = ReplyTemplates.cancel())
 			User.set_expected_type(UserInput.Username.value)
 			bot.answer_callback_query(Call.id)
 
@@ -171,189 +177,44 @@ class Decorators:
 		"""
 
 		@bot.message_handler(content_types = ["text"], regexp = "🎯 Выборка")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			User.set_expected_type(UserInput.Sampling.value)
-			Options = User.get_property("ap")
-			Sampling = Options["sampling"]
-
-			if type(Sampling) == int: Sampling = f"<i>{Sampling} пользователей</i>"
-			elif type(Sampling) == str: Sampling = f"@{Sampling}"
-			elif Sampling == None: Sampling = "🚫"
-
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = f"<b>Укажите выборку</b>\n\nТекущее количество пользователей: {len(users.users)}\nТекущая выборка: {Sampling}",
-				parse_mode = "HTML",
-				reply_markup = InlineKeyboards.sampling(User)
-			)
+		def Button(Message: types.Message): ReplyFunctions.Selection(bot, users, Message)
 
 		@bot.message_handler(content_types = ["text"], regexp = "🕹️ Добавить кнопку")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			User.set_expected_type(UserInput.ButtonLabel.value)
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "Введите подпись для кнопки.",
-				reply_markup = ReplyKeyboards.cancel()
-			)
+		def Button(Message: types.Message): ReplyFunctions.AddButton(bot, users, Message)
 
 		@bot.message_handler(content_types = ["text"], regexp = "✅ Завершить")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			User.set_expected_type(None)
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "Сообщение сохранено.",
-				reply_markup = ReplyKeyboards.mailing(User)
-			)
+		def Button(Message: types.Message): ReplyFunctions.Done(bot, users, Message)
 
 		@bot.message_handler(content_types = ["text"], regexp = "❌ Закрыть")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "Панель управления закрыта.",
-				reply_markup = types.ReplyKeyboardRemove()
-			)
-
+		def Button(Message: types.Message): ReplyFunctions.Close(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "🟢 Запустить")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			User.set_object("mailer", Mailer(bot))
-			Options = User.get_property("ap")
-
-			if not Options["mailing_caption"] and not Options["mailing_content"]:
-				bot.send_message(
-					chat_id = Message.chat.id,
-					text = "Вы не задали сообщение для рассылки."
-				)
-
-			else: User.get_object("mailer").start_mailing(User, users)
-
+		def Button(Message: types.Message): ReplyFunctions.StartMailing(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "↩️ Назад")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "Панель управления.",
-				reply_markup = ReplyKeyboards.admin()
-			)
-
+		def Button(Message: types.Message): ReplyFunctions.Back(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "❌ Отмена")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			
-			if User.expected_type == UserInput.Message.value:
-				Options = User.get_property("ap")
-				User.set_expected_type(UserInput.Message.value)
-				Caption = Options["temp_mailing_caption"]
-				Content = Options["temp_mailing_content"]
-				Options["mailing_caption"] = Caption
-				Options["mailing_content"] = Content
-				del Options["temp_mailing_caption"]
-				del Options["temp_mailing_content"]
-				User.set_property("ap", Options)
-
-			User.set_expected_type(None)
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "Действие отменено.",
-				reply_markup = ReplyKeyboards.mailing(User)
-			)
-
+		def Button(Message: types.Message): ReplyFunctions.Cancel(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "🔴 Остановить")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			Options = User.get_property("ap")
-			Options["mailing"] = None
-			User.set_property("ap", Options)
-
+		def Button(Message: types.Message): ReplyFunctions.StopMailing(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "🔎 Просмотр")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			Options = User.get_property("ap")
-
-			if not Options["mailing_caption"] and not Options["mailing_content"]:
-				bot.send_message(
-					chat_id = Message.chat.id,
-					text = "Вы не задали сообщение для рассылки."
-				)
-
-			else: Mailer(bot).send_message(User, User)
-
+		def Button(Message: types.Message): ReplyFunctions.View(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "👤 Рассылка")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "Управление рассылкой.",
-				reply_markup = ReplyKeyboards.mailing(User)
-			)
-
+		def Button(Message: types.Message): ReplyFunctions.Mailing(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "✏️ Редактировать")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			Options = User.get_property("ap")
-			User.set_expected_type(UserInput.Message.value)
-			Caption = Options["mailing_caption"]
-			Content = Options["mailing_content"]
-			Options["temp_mailing_caption"] = Caption
-			Options["temp_mailing_content"] = Content
-			Options["mailing_caption"] = None
-			Options["mailing_content"] = list()
-			User.set_property("ap", Options)
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "Отправьте сообщение, которое будет использоваться в рассылке.\n\nЕсли вы прикрепляете несколько вложений, для их упорядочивания рекомендуется выполнять загрузку файлов последовательно.",
-				reply_markup = ReplyKeyboards.editing()
-			)
-
+		def Button(Message: types.Message): ReplyFunctions.Edit(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "📊 Статистика")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-
-			UsersCount = len(users.users)
-			BlockedUsersCount = 0
-
-			for user in users.users:
-				if user.is_chat_forbidden: BlockedUsersCount += 1
-
-			Counts = [len(users.premium_users), len(users.get_active_users()), BlockedUsersCount]
-			Percentages = [None, None, None]
-
-			for Index in range(len(Counts)):
-				Percentages[Index] = round(Counts[Index] / UsersCount * 100, 1)
-				if str(Percentages[Index]).endswith(".0"): Percentages[Index] = int(Percentages[Index])
-
-			Text = (
-				"<b>📊 Статистика</b>\n",
-				f"👤 Всего пользователей: <b>{UsersCount}</b>",
-				f"⭐ Из них Premium: <b>{Counts[0]}</b> (<i>{Percentages[0]}%</i>)",
-				f"🧩 Активных за сутки: <b>{Counts[1]}</b> (<i>{Percentages[1]}%</i>)",
-				f"⛔ Заблокировали: <b>{Counts[2]}</b> (<i>{Percentages[2]}%</i>)"
-			)
-
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "\n".join(Text),
-				parse_mode = "HTML",
-				reply_markup = InlineKeyboards.extract() 
-			)
-
+		def Button(Message: types.Message): ReplyFunctions.Statistics(bot, users, Message)
+		
 		@bot.message_handler(content_types = ["text"], regexp = "🕹️ Удалить кнопку")
-		def Button(Message: types.Message):
-			User = users.auth(Message.from_user)
-			Options = User.get_property("ap")
-			Options["button_label"] = None
-			Options["button_link"] = None
-			User.set_property("ap", Options)
-			bot.send_message(
-				chat_id = Message.chat.id,
-				text = "Кнопка удалена.",
-				reply_markup = ReplyKeyboards.mailing(User)
-			)
-
+		def Button(Message: types.Message): ReplyFunctions.RemoveButton(bot, users, Message)
+		
 class Keyboards:
 	"""Контейнер разметок кнопок."""
 
@@ -380,55 +241,76 @@ class Keyboards:
 class Procedures:
 	"""Наборы процедур."""
 
-	def text(self, bot: TeleBot, user: UserData, message: types.Message) -> bool:
+	def text(self, bot: TeleBot, users: UsersManager, message: types.Message) -> bool:
 		"""
 		Набор процедур: текст.
 			bot – экземпляр бота;\n
-			user – пользователь;\n
+			users – менеджер пользователей;\n
 			message – сообщение.
 		"""
 
-		if not user.expected_type: return False
-		elif not user.expected_type.startswith("ap_"): return False
-		elif not user.has_permissions("admin"): return False
+		User = users.auth(message.from_user)
+		if not User.has_permissions("admin"): return False
+		Options = User.get_property("ap")
 
-		Options = user.get_property("ap")
+		if Options["is_open"]:
+			IsReplyButton = True
 
-		if user.expected_type == UserInput.Message.value:
+			match message.text:
+				case "🎯 Выборка": ReplyFunctions.Selection(bot, users, message)
+				case "🕹️ Добавить кнопку": ReplyFunctions.AddButton(bot, users, message)
+				case "✅ Завершить": ReplyFunctions.Done(bot, users, message)
+				case "❌ Закрыть": ReplyFunctions.Close(bot, users, message)
+				case "🟢 Запустить": ReplyFunctions.StartMailing(bot, users, message)
+				case "↩️ Назад": ReplyFunctions.Back(bot, users, message)
+				case "❌ Отмена": ReplyFunctions.Cancel(bot, users, message)
+				case "🔴 Остановить": ReplyFunctions.StopMailing(bot, users, message)
+				case "🔎 Просмотр": ReplyFunctions.View(bot, users, message)
+				case "👤 Рассылка": ReplyFunctions.Mailing(bot, users, message)
+				case "✏️ Редактировать": ReplyFunctions.Edit(bot, users, message)
+				case "📊 Статистика": ReplyFunctions.Statistics(bot, users, message)
+				case "🕹️ Удалить кнопку": ReplyFunctions.RemoveButton(bot, users, message)
+				case _ : IsReplyButton = False
+
+			if IsReplyButton: return True
+
+		if not User.expected_type or not User.expected_type.startswith("ap_"): return False
+
+		if User.expected_type == UserInput.Message.value:
 			Options["mailing_caption"] = message.html_text
-			user.set_property("ap", Options)
+			User.set_property("ap", Options)
 
-		elif user.expected_type == UserInput.ButtonLabel.value:
+		elif User.expected_type == UserInput.ButtonLabel.value:
 			Options["button_label"] = message.text
-			user.set_property("ap", Options)
-			user.set_expected_type(UserInput.ButtonLink.value)
+			User.set_property("ap", Options)
+			User.set_expected_type(UserInput.ButtonLink.value)
 			bot.send_message(
 				chat_id = message.chat.id,
 				text = "Отправьте ссылку, которая будет помещена в кнопку.",
-				reply_markup = ReplyKeyboards.cancel()
+				reply_markup = ReplyTemplates.cancel()
 			)
 		
-		elif user.expected_type == UserInput.ButtonLink.value:
+		elif User.expected_type == UserInput.ButtonLink.value:
 			Options["button_link"] = message.text
-			user.set_property("ap", Options)
-			user.set_expected_type(None)
+			User.set_property("ap", Options)
+			User.set_expected_type(None)
 			bot.send_message(
 				chat_id = message.chat.id,
 				text = "Кнопка прикреплена к сообщению.",
-				reply_markup = ReplyKeyboards.mailing(user)
+				reply_markup = MailingReplyTemplates.mailing(User)
 			)
 		
-		elif user.expected_type == UserInput.Username.value:
+		elif User.expected_type == UserInput.Username.value:
 			Username = message.text.lstrip("@")
 			if Username.startswith("https://t.me/"): Username = Username[len("https://t.me/"):]
 
 			Options["sampling"] = Username
-			user.set_property("ap", Options)
-			user.set_expected_type(None)
+			User.set_property("ap", Options)
+			User.set_expected_type(None)
 			bot.send_message(
 				chat_id = message.chat.id,
 				text = "Никнейм сохранён.",
-				reply_markup = ReplyKeyboards.mailing(user)
+				reply_markup = MailingReplyTemplates.mailing(User)
 			)
 
 		return True
@@ -449,13 +331,6 @@ class Procedures:
 			elif message.content_type == "video": Options["mailing_content"].append({"type": "video", "file_id": message.video.file_id})
 			elif message.content_type == "photo": Options["mailing_content"].append({"type": "photo", "file_id": message.photo[-1].file_id})
 
-class UserInput(enum.Enum):
-	ButtonLabel = "ap_button_label"
-	ButtonLink = "ap_button_link"
-	Message = "ap_message"
-	Sampling = "ap_sampling"
-	Username = "ap_username"
-	
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#

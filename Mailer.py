@@ -1,13 +1,13 @@
-from .ReplyKeyboards import ReplyKeyboards
+from .ReplyKeyboards.Mailing import MailingReplyTemplates
 
 from dublib.TelebotUtils import UserData, UsersManager
 from dublib.Polyglot import Markdown
 
-from telebot import TeleBot, types
 from threading import Thread
 from time import sleep
-
 import random
+
+from telebot import TeleBot, types
 
 class Mailer:
 	"""Рассыльщик."""
@@ -59,7 +59,7 @@ class Mailer:
 		self.__Bot.send_message(
 			chat_id = admin.id,
 			text = "Рассылка начата.",
-			reply_markup = ReplyKeyboards.mailing(admin)
+			reply_markup = MailingReplyTemplates.mailing(admin)
 		)
 		MessageID = self.__Bot.send_message(
 			chat_id = admin.id,
@@ -96,7 +96,7 @@ class Mailer:
 		self.__Bot.send_message(
 			chat_id = admin.id,
 			text = "Рассылка завершена.",
-			reply_markup = ReplyKeyboards.mailing(admin)
+			reply_markup = MailingReplyTemplates.mailing(admin)
 		)
 
 	#==========================================================================================#
