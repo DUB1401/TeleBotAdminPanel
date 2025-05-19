@@ -4,7 +4,7 @@
 **Основные возможности:**
 * просмотр статистики по пользователям;
 * выгрузка списка пользователей в формат _*.xlsx_ (файл совместим со [SpamBot](https://github.com/DUB1401/SpamBot));
-* рассылка сообщение пользователям бота, поддерживающая множество типов вложений.
+* рассылка сообщения пользователям бота, поддерживающая множество типов вложений.
 
 ## Порядок установки и использования
 Панель управления распространяется как импортируемый модуль, который можно быстро интегрировать в ваш проект в качестве подмодуля Git.
@@ -28,6 +28,7 @@ git submodule add https://github.com/DUB1401/TeleBotAdminPanel.git {PATH}
 
 ### Пример инициализации
 ```Python
+from TeleBotAdminPanel.Core.Moderation import Moderator
 from TeleBotAdminPanel import Panel
 
 # Требуемые значения.
@@ -39,19 +40,18 @@ Bot = TeleBot(TOKEN)
 Users = UsersManager("Data/Users")
 AdminPanel = Panel()
 
+# Опциональное включение модуля модерации контента.
+Moderator.initialize(lambda: ["Unmoderated content."], print)
+
 # Поместить в секцию обработки команд бота.
 AdminPanel.decorators.commands(Bot, Users, ADMIN_PASSWORD)
-
-# Поместить в секцию обработки Reply-кнопок бота.
-# Использует фильтрацию через regexp.
-AdminPanel.decorators.reply_keyboards(Bot, Users)
 
 # Обработка текстовых сообщений.
 @Bot.message_handler(content_types = ["text"])
 def Text(Message: types.Message):
 	User = Users.auth(Message.from_user)
-	# Если процедура сработала, завершить обработку.
-	if AdminPanel.procedures.text(Bot, User, Message): return
+	# Если процедура сработала, прервать обработку.
+	if AdminPanel.procedures.text(Bot, Users, Message): return
 
 # Поместить в секцию обработки Inline-кнопок бота.
 # Все Callback-запросы начинаются с "ap_".
@@ -64,6 +64,6 @@ AdminPanel.decorators.photo(Bot, Users)
 @Bot.message_handler(content_types = ["audio", "document", "video"])
 def File(Message: types.Message):
 	User = Users.auth(Message.from_user)
-	# Если процедура сработала, продолжить обработку.
-	if AdminPanel.procedures.files(Bot, User, Message): pass
+	# Если процедура сработала, прервать обработку.
+	if AdminPanel.procedures.files(Bot, User, Message): return
 ```

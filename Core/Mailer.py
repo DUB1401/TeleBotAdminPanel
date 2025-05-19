@@ -1,4 +1,4 @@
-from .ReplyKeyboards.Mailing import MailingReplyTemplates
+from ..UI.ReplyKeyboards import MailingReplyKeyboards
 
 from dublib.TelebotUtils import UserData, UsersManager
 from dublib.Polyglot import Markdown
@@ -59,7 +59,7 @@ class Mailer:
 		self.__Bot.send_message(
 			chat_id = admin.id,
 			text = "Рассылка начата.",
-			reply_markup = MailingReplyTemplates.mailing(admin)
+			reply_markup = MailingReplyKeyboards.mailing(admin)
 		)
 		MessageID = self.__Bot.send_message(
 			chat_id = admin.id,
@@ -96,7 +96,7 @@ class Mailer:
 		self.__Bot.send_message(
 			chat_id = admin.id,
 			text = "Рассылка завершена.",
-			reply_markup = MailingReplyTemplates.mailing(admin)
+			reply_markup = MailingReplyKeyboards.mailing(admin)
 		)
 
 	#==========================================================================================#

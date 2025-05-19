@@ -1,14 +1,16 @@
+from .Moderation import ModerationReplyFunctions
 from ..InlineKeyboards import InlineKeyboards
-from .Mailing import MailingReplyTemplates
-from ..Structs import UserInput
-from ..Mailer import Mailer
+from .Mailing import MailingReplyKeyboards
+from ...Core.Moderation import Moderator
+from ...Core.Structs import UserInput
+from ...Core.Mailer import Mailer
 
 from dublib.TelebotUtils import UsersManager
 
 from telebot import TeleBot, types
 
-class ReplyTemplates:
-	"""Генератор Reply-интерфейса."""
+class ReplyKeyboards:
+	"""Шаблоны Reply-интерфейсов."""
 
 	def admin() -> types.ReplyKeyboardMarkup:
 		"""Строит кнопочный интерфейс: панель управления."""
@@ -16,8 +18,14 @@ class ReplyTemplates:
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
 		Mailing = types.KeyboardButton("👤 Рассылка")
 		Statistics = types.KeyboardButton("📊 Статистика")
+		Menu.add(Mailing, Statistics, row_width = 2)
+		
+		if Moderator.ENABLED:
+			Moderation = types.KeyboardButton("🛡️ Модерация")
+			Menu.add(Moderation)
+
 		Close = types.KeyboardButton("❌ Закрыть")
-		Menu.add(Mailing, Statistics, Close, row_width = 2)
+		Menu.add(Close)
 
 		return Menu
 
@@ -39,8 +47,9 @@ class ReplyTemplates:
 		Menu.add(Ok, Cancel, row_width = 1)
 
 		return Menu
-	
-class ReplyFunctions:
+
+class ReplyFunctions(ModerationReplyFunctions):
+	"""Набор функций обработки Reply-кнопок."""
 
 	def Selection(bot: TeleBot, users: UsersManager, message: types.Message):
 		"""
@@ -79,7 +88,7 @@ class ReplyFunctions:
 		bot.send_message(
 			chat_id = message.chat.id,
 			text = "Введите подпись для кнопки.",
-			reply_markup = ReplyTemplates.cancel()
+			reply_markup = ReplyKeyboards.cancel()
 		)
 
 	def Done(bot: TeleBot, users: UsersManager, message: types.Message):
@@ -95,7 +104,7 @@ class ReplyFunctions:
 		bot.send_message(
 			chat_id = message.chat.id,
 			text = "Сообщение сохранено.",
-			reply_markup = MailingReplyTemplates.mailing(User)
+			reply_markup = MailingReplyKeyboards.mailing(User)
 		)
 
 	def Close(bot: TeleBot, users: UsersManager, message: types.Message):
@@ -150,7 +159,7 @@ class ReplyFunctions:
 		bot.send_message(
 			chat_id = message.chat.id,
 			text = "Панель управления.",
-			reply_markup = ReplyTemplates.admin()
+			reply_markup = ReplyKeyboards.admin()
 		)
 
 	def Cancel(bot: TeleBot, users: UsersManager, message: types.Message):
@@ -178,7 +187,7 @@ class ReplyFunctions:
 		bot.send_message(
 			chat_id = message.chat.id,
 			text = "Действие отменено.",
-			reply_markup = MailingReplyTemplates.mailing(User)
+			reply_markup = MailingReplyKeyboards.mailing(User)
 		)
 
 	def StopMailing(bot: TeleBot, users: UsersManager, message: types.Message):
@@ -225,7 +234,7 @@ class ReplyFunctions:
 		bot.send_message(
 			chat_id = message.chat.id,
 			text = "Управление рассылкой.",
-			reply_markup = MailingReplyTemplates.mailing(User)
+			reply_markup = MailingReplyKeyboards.mailing(User)
 		)
 
 	def Edit(bot: TeleBot, users: UsersManager, message: types.Message):
@@ -248,7 +257,7 @@ class ReplyFunctions:
 		bot.send_message(
 			chat_id = message.chat.id,
 			text = "Отправьте сообщение, которое будет использоваться в рассылке.\n\nЕсли вы прикрепляете несколько вложений, для их упорядочивания рекомендуется выполнять загрузку файлов последовательно.",
-			reply_markup = ReplyTemplates.editing()
+			reply_markup = ReplyKeyboards.editing()
 		)
 
 	def Statistics(bot: TeleBot, users: UsersManager, message: types.Message):
@@ -303,5 +312,5 @@ class ReplyFunctions:
 		bot.send_message(
 			chat_id = message.chat.id,
 			text = "Кнопка удалена.",
-			reply_markup = MailingReplyTemplates.mailing(User)
+			reply_markup = MailingReplyKeyboards.mailing(User)
 		)

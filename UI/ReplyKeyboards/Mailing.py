@@ -2,7 +2,7 @@ from dublib.TelebotUtils import UserData
 
 from telebot import types
 
-class MailingReplyTemplates:
+class MailingReplyKeyboards:
 	"""Генератор Reply-интерфейса."""
 
 	def mailing(user: UserData) -> types.ReplyKeyboardMarkup:

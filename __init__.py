@@ -1,8 +1,9 @@
-from .ReplyKeyboards import ReplyFunctions, ReplyTemplates
-from .ReplyKeyboards.Mailing import MailingReplyTemplates
-from .InlineKeyboards import InlineKeyboards
-from .Extractor import Extractor
-from .Structs import UserInput
+from .UI.ReplyKeyboards import ReplyFunctions, ReplyKeyboards
+from .UI.ReplyKeyboards.Mailing import MailingReplyKeyboards
+from .UI.InlineKeyboards import InlineKeyboards
+from .UI.InlineKeyboards.Moderation import ModerationInlineDecorators
+from .Core.Extractor import Extractor
+from .Core.Structs import UserInput
 
 from dublib.TelebotUtils import UserData, UsersManager
 
@@ -53,7 +54,7 @@ class Decorators:
 					bot.send_message(
 						chat_id = Message.chat.id,
 						text = "Пароль принят. Доступ разрешён.",
-						reply_markup = ReplyTemplates.admin()
+						reply_markup = ReplyKeyboards.admin()
 					)
 
 				else:
@@ -68,7 +69,7 @@ class Decorators:
 					bot.send_message(
 						chat_id = Message.chat.id,
 						text = "Доступ разрешён.",
-						reply_markup = ReplyTemplates.admin()
+						reply_markup = ReplyKeyboards.admin()
 					)
 
 				else:
@@ -100,34 +101,19 @@ class Decorators:
 				elif Message.content_type == "video": Options["mailing_content"].append({"type": "video", "file_id": Message.video.file_id})
 				elif Message.content_type == "photo": Options["mailing_content"].append({"type": "photo", "file_id": Message.photo[-1].file_id})
 
-	def inline_keyboards(self, bot: TeleBot = None, users: UsersManager = None):
+	def inline_keyboards(self, bot: TeleBot, users: UsersManager):
 		"""
 		Набор декораторов: Inline-кнопки.
 			bot – экземпляр бота;\n
 			users – менеджер пользователей.
 		"""
 
-		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_sampling"))
-		def InlineButton(Call: types.CallbackQuery):
-			User = users.auth(Call.from_user)
-			Options = User.get_property("ap")
-			if Call.data.endswith("all"): Options["sampling"] = None
-			if Call.data.endswith("last"): Options["sampling"] = 1000
-			User.set_property("ap", Options)
-
-			bot.answer_callback_query(Call.id)
-			bot.delete_message(chat_id = User.id, message_id = Call.message.id)
-
-			if not Call.data.endswith("cancel"): bot.send_message(
-				chat_id = User.id,
-				text = "Выборка установлена.",
-				reply_markup = MailingReplyTemplates.mailing(User)
-			)
-				
-			else: User.set_expected_type(None)
+		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_delete"))
+		def Delete(Call: types.CallbackQuery):
+			bot.delete_message(Call.message.chat.id, Call.message.id)
 
 		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_extract"))
-		def InlineButton(Call: types.CallbackQuery):
+		def Extract(Call: types.CallbackQuery):
 			User = users.auth(Call.from_user)
 			Date = datetime.now().date().strftime("%d.%m.%Y")
 			Filename = f"{Date}.xlsx"
@@ -145,12 +131,33 @@ class Decorators:
 
 			except Exception as ExceptionData: print(ExceptionData)
 
-		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_one_user"))
-		def InlineButton(Call: types.CallbackQuery):
+		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_sampling"))
+		def Sampling(Call: types.CallbackQuery):
 			User = users.auth(Call.from_user)
-			bot.send_message(User.id, "Отправьте полный ник пользователя или ссылку на него.", reply_markup = ReplyTemplates.cancel())
+			Options = User.get_property("ap")
+			if Call.data.endswith("all"): Options["sampling"] = None
+			if Call.data.endswith("last"): Options["sampling"] = 1000
+			User.set_property("ap", Options)
+
+			bot.answer_callback_query(Call.id)
+			bot.delete_message(chat_id = User.id, message_id = Call.message.id)
+
+			if not Call.data.endswith("cancel"): bot.send_message(
+				chat_id = User.id,
+				text = "Выборка установлена.",
+				reply_markup = MailingReplyKeyboards.mailing(User)
+			)
+				
+			else: User.set_expected_type(None)
+
+		@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_one_user"))
+		def SamplingOneUser(Call: types.CallbackQuery):
+			User = users.auth(Call.from_user)
+			bot.send_message(User.id, "Отправьте полный ник пользователя или ссылку на него.", reply_markup = ReplyKeyboards.cancel())
 			User.set_expected_type(UserInput.Username.value)
 			bot.answer_callback_query(Call.id)
+
+		ModerationInlineDecorators(bot, users)
 
 	def photo(self, bot: TeleBot, users: UsersManager):
 		"""
@@ -270,6 +277,9 @@ class Procedures:
 				case "✏️ Редактировать": ReplyFunctions.Edit(bot, users, message)
 				case "📊 Статистика": ReplyFunctions.Statistics(bot, users, message)
 				case "🕹️ Удалить кнопку": ReplyFunctions.RemoveButton(bot, users, message)
+
+				case "🛡️ Модерация": ReplyFunctions.Moderation(bot, users, message)
+
 				case _ : IsReplyButton = False
 
 			if IsReplyButton: return True
@@ -287,7 +297,7 @@ class Procedures:
 			bot.send_message(
 				chat_id = message.chat.id,
 				text = "Отправьте ссылку, которая будет помещена в кнопку.",
-				reply_markup = ReplyTemplates.cancel()
+				reply_markup = ReplyKeyboards.cancel()
 			)
 		
 		elif User.expected_type == UserInput.ButtonLink.value:
@@ -297,7 +307,7 @@ class Procedures:
 			bot.send_message(
 				chat_id = message.chat.id,
 				text = "Кнопка прикреплена к сообщению.",
-				reply_markup = MailingReplyTemplates.mailing(User)
+				reply_markup = MailingReplyKeyboards.mailing(User)
 			)
 		
 		elif User.expected_type == UserInput.Username.value:
@@ -310,7 +320,7 @@ class Procedures:
 			bot.send_message(
 				chat_id = message.chat.id,
 				text = "Никнейм сохранён.",
-				reply_markup = MailingReplyTemplates.mailing(User)
+				reply_markup = MailingReplyKeyboards.mailing(User)
 			)
 
 		return True

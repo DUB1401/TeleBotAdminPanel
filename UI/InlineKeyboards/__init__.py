@@ -1,9 +1,11 @@
+from .Moderation import ModerationInlineKeyboards
+
 from dublib.TelebotUtils import UserData
 
 from telebot import types
 
 class InlineKeyboards:
-	"""Генератор Inline-интерфейса."""
+	"""Шаблоны Inline-интерфейсов."""
 
 	def extract():
 		"""Строит Inline-интерфейс: выгрузка."""
@@ -34,4 +36,3 @@ class InlineKeyboards:
 		Menu.add(Cancel, row_width = 1)
 
 		return Menu
-		
