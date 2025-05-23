@@ -14,12 +14,11 @@ class ModerationInlineKeyboards:
 		Menu = types.InlineKeyboardMarkup()
 
 		if Moderator.get_content_length():
-			Extract = types.InlineKeyboardButton("Приступить", callback_data = "ap_moderation_start")
-			Menu.add(Extract)
+			Start = types.InlineKeyboardButton("Приступить", callback_data = "ap_moderation_start")
+			Menu.add(Start)
 		
-		else:
-			Extract = types.InlineKeyboardButton("Закрыть", callback_data = "ap_delete")
-			Menu.add(Extract)
+		Close = types.InlineKeyboardButton("Закрыть", callback_data = "ap_delete")
+		Menu.add(Close)
 
 		return Menu
 	
@@ -66,4 +65,9 @@ def ModerationInlineDecorators(bot: TeleBot, users: UsersManager):
 			text = NewItem,
 			parse_mode = "HTML",
 			reply_markup = ModerationInlineKeyboards.moderation_item()
+		)
+			
+		else: bot.send_message(
+			chat_id = Call.message.chat.id,
+			text = "Вы завершили модерацию всех доступных записей."
 		)
