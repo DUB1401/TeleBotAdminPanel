@@ -1,10 +1,8 @@
 from ..UI.ReplyKeyboards import MailingReplyKeyboards
 
-from dublib.TelebotUtils import UserData, UsersManager
-from dublib.Polyglot import Markdown
+from dublib.TelebotUtils import TeleMaster, UserData, UsersManager
 
 from threading import Thread
-from time import sleep
 import random
 
 from telebot import TeleBot, types
@@ -63,8 +61,8 @@ class Mailer:
 		)
 		MessageID = self.__Bot.send_message(
 			chat_id = admin.id,
-			text = f"*📨 Рассылка*\n\n⏳ Прогресс: {Markdown(Progress).escaped_text}%\n✉️ Отправлено: {Sended}\n❌ Ошибок: {Errors}",
-			parse_mode = "MarkdownV2"
+			text = f"<b>📨 Рассылка</b>\n\n⏳ Прогресс: {Progress}%\n✉️ Отправлено: {Sended}\n❌ Ошибок: {Errors}",
+			parse_mode = "HTML"
 		).id
 
 		Options = admin.get_property("ap")
@@ -74,8 +72,13 @@ class Mailer:
 
 			try:
 				if not targets[Index].is_chat_forbidden: self.send_message(admin, targets[Index])
+				else: continue
 
-			except: Errors += 1
+			except: 
+				Options["mailing"] = False
+				admin.set_property("ap", Options)
+				Errors += 1
+				return
 			else: Sended += 1
 
 			Progress = (Sended + Errors) / len(targets) * 100
@@ -85,14 +88,19 @@ class Mailer:
 			self.__Bot.edit_message_text(
 				chat_id = admin.id,
 				message_id = MessageID,
-				text = f"*📨 Рассылка*\n\n⏳ Прогресс: {Markdown(Progress).escaped_text}% \\({Index + 1} из {len(targets)}\\)\n✉️ Отправлено: {Sended}\n❌ Ошибок: {Errors}",
-				parse_mode = "MarkdownV2"
+				text = f"<b>📨 Рассылка</b>\n\n⏳ Прогресс: {Progress}% ({Index + 1} из {len(targets)})\n✉️ Отправлено: {Sended}\n❌ Ошибок: {Errors}",
+				parse_mode = "HTML"
 			)
-			sleep(0.1)
 
 		Options["mailing"] = False
 		admin.set_property("ap", Options)
 
+		self.__Bot.edit_message_text(
+			chat_id = admin.id,
+			message_id = MessageID,
+			text = f"<b>📨 Рассылка</b>\n\n⏳ Прогресс: {Progress}% ({Index + 1} из {len(targets)})\n✉️ Отправлено: {Sended}\n❌ Ошибок: {Errors}",
+			parse_mode = "HTML"
+		)
 		self.__Bot.send_message(
 			chat_id = admin.id,
 			text = "Рассылка завершена.",
@@ -114,6 +122,7 @@ class Mailer:
 		self.__Bot = bot
 		self.__MailingThread = None
 
+	TeleMaster.ignore_frecuency_errors
 	def send_message(self, admin: UserData, user: UserData):
 		"""
 		Отправляет сообщение пользователю.

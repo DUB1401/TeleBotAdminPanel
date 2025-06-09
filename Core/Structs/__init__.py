@@ -1,3 +1,5 @@
+from .OptionsStruct import OptionsStruct
+
 import enum
 
 class UserInput(enum.Enum):

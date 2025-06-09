@@ -1,10 +1,12 @@
 # TeleBotAdminPanel
-**TeleBotAdminPanel** – это легко встраиваемая панель администрирования для ботов Telegram, использующих [pyTelegramBotAPI](https://github.com/eternnoir/pyTelegramBotAPI?ysclid=m4fkp3hare559827384) и [dublib](https://github.com/DUB1401/dublib).
+**TeleBotAdminPanel** – это легко встраиваемая панель администрирования для ботов Telegram, использующих [pyTelegramBotAPI](https://github.com/eternnoir/pyTelegramBotAPI) и [dublib](https://github.com/DUB1401/dublib).
 
 **Основные возможности:**
 * просмотр статистики по пользователям;
 * выгрузка списка пользователей в формат _*.xlsx_ (файл совместим со [SpamBot](https://github.com/DUB1401/SpamBot));
-* рассылка сообщения пользователям бота, поддерживающая множество типов вложений.
+* рассылка сообщения пользователям бота, поддерживающая множество типов вложений;
+* выгрузка файлов с сервера через бота;
+* модерация текстового контента.
 
 ## Порядок установки и использования
 Панель управления распространяется как импортируемый модуль, который можно быстро интегрировать в ваш проект в качестве подмодуля Git.
@@ -29,6 +31,7 @@ git submodule add https://github.com/DUB1401/TeleBotAdminPanel.git {PATH}
 ### Пример инициализации
 ```Python
 from TeleBotAdminPanel.Core.Moderation import Moderator
+from TeleBotAdminPanel.Core.Uploading import Uploader
 from TeleBotAdminPanel import Panel
 
 # Требуемые значения.
@@ -38,13 +41,15 @@ ADMIN_PASSWORD = "1234"
 # Инициализация необходимых объектов.
 Bot = TeleBot(TOKEN)
 Users = UsersManager("Data/Users")
-AdminPanel = Panel()
+AdminPanel = Panel(Bot, Users, ADMIN_PASSWORD)
 
 # Опциональное включение модуля модерации контента.
 Moderator.initialize(lambda: ["Unmoderated content."], print)
+# Добавляет файл в систему выгрузки.
+Uploader.set_uploadable_files(["Data/Users.xlsx"])
 
 # Поместить в секцию обработки команд бота.
-AdminPanel.decorators.commands(Bot, Users, ADMIN_PASSWORD)
+AdminPanel.decorators.commands()
 
 # Обработка текстовых сообщений.
 @Bot.message_handler(content_types = ["text"])
@@ -55,13 +60,10 @@ def Text(Message: types.Message):
 
 # Поместить в секцию обработки Inline-кнопок бота.
 # Все Callback-запросы начинаются с "ap_".
-AdminPanel.decorators.inline_keyboards(Bot, Users)
-
-# Поместить в секцию обработки вложений.
-AdminPanel.decorators.photo(Bot, Users)
+AdminPanel.decorators.inline_keyboards()
 
 # Обработка вложений.
-@Bot.message_handler(content_types = ["audio", "document", "video"])
+@Bot.message_handler(content_types = ["audio", "document", "video", "photo"])
 def File(Message: types.Message):
 	User = Users.auth(Message.from_user)
 	# Если процедура сработала, прервать обработку.

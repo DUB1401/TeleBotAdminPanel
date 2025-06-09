@@ -34,9 +34,9 @@ class Moderator:
 		:rtype: int
 		"""
 
-		Content = Moderator.CONTENT_GETTER()
-
-		return len(Content)
+		if not Moderator.CONTENT_GETTER: return
+		
+		return len(Moderator.CONTENT_GETTER())
 
 	def initialize(content_getter: Callable, callback: Callable):
 		"""

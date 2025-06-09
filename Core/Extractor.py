@@ -35,6 +35,25 @@ class ColumnsMethods:
 
 		return CellData(user.username)
 	
+	def get_name(user: UserData) -> CellData:
+		"""
+		Заполняет колонку: имя.
+			user – данные пользователя.
+		"""
+
+		FirstName, LastName = None, None
+		Name = str()
+
+		try: FirstName = user.get_property("first_name")
+		except KeyError: pass 
+		try: LastName = user.get_property("last_name")
+		except KeyError: pass 
+
+		if FirstName: Name = FirstName
+		if LastName: Name += " " + LastName
+		
+		return CellData(user.username)
+
 	def get_premium(user: UserData) -> CellData:
 		"""
 		Заполняет колонку: Premium-статус.

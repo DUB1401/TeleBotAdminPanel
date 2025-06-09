@@ -1,7 +1,9 @@
 from .Moderation import ModerationReplyFunctions
+from .Uploading import UploadingReplyFunctions
 from ..InlineKeyboards import InlineKeyboards
 from .Mailing import MailingReplyKeyboards
 from ...Core.Moderation import Moderator
+from ...Core.Uploading import Uploader
 from ...Core.Structs import UserInput
 from ...Core.Mailer import Mailer
 
@@ -20,9 +22,10 @@ class ReplyKeyboards:
 		Statistics = types.KeyboardButton("📊 Статистика")
 		Menu.add(Mailing, Statistics, row_width = 2)
 		
-		if Moderator.ENABLED:
-			Moderation = types.KeyboardButton("🛡️ Модерация")
-			Menu.add(Moderation)
+		Buffer = list()
+		if Moderator.ENABLED: Buffer.append(types.KeyboardButton("🛡️ Модерация"))
+		if Uploader.FILES: Buffer.append(types.KeyboardButton("📤 Выгрузка"))
+		Menu.add(*Buffer, row_width = 2)
 
 		Close = types.KeyboardButton("❌ Закрыть")
 		Menu.add(Close)
@@ -48,7 +51,7 @@ class ReplyKeyboards:
 
 		return Menu
 
-class ReplyFunctions(ModerationReplyFunctions):
+class ReplyFunctions(ModerationReplyFunctions, UploadingReplyFunctions):
 	"""Набор функций обработки Reply-кнопок."""
 
 	def Selection(bot: TeleBot, users: UsersManager, message: types.Message):
