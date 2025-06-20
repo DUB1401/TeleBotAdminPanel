@@ -33,26 +33,10 @@ class ColumnsMethods:
 			user – данные пользователя.
 		"""
 
-		return CellData(user.username)
-	
-	def get_name(user: UserData) -> CellData:
-		"""
-		Заполняет колонку: имя.
-			user – данные пользователя.
-		"""
+		Data = CellData()
+		if user.username: Data.value = user.username
 
-		FirstName, LastName = None, None
-		Name = str()
-
-		try: FirstName = user.get_property("first_name")
-		except KeyError: pass 
-		try: LastName = user.get_property("last_name")
-		except KeyError: pass 
-
-		if FirstName: Name = FirstName
-		if LastName: Name += " " + LastName
-		
-		return CellData(user.username)
+		return Data
 
 	def get_premium(user: UserData) -> CellData:
 		"""
@@ -61,8 +45,10 @@ class ColumnsMethods:
 		"""
 
 		Data = CellData()
-		Data.value = str(user.is_premium).lower()
-		Data.style = Styles.Green if user.is_premium else Styles.Red
+
+		if user.is_premium != None:
+			Data.value = str(user.is_premium).lower()
+			Data.style = Styles.Green if user.is_premium else Styles.Red
 
 		return Data
 	
@@ -73,10 +59,10 @@ class ColumnsMethods:
 		"""
 
 		Data = CellData()
-		if user.is_chat_forbidden == None: return Data
 
-		Data.value = str(user.is_chat_forbidden).lower()
-		Data.style = Styles.Red if user.is_chat_forbidden else Styles.Green
+		if user.is_chat_forbidden != None:
+			Data.value = str(user.is_chat_forbidden).lower()
+			Data.style = Styles.Red if user.is_chat_forbidden else Styles.Green
 
 		return Data
 	
