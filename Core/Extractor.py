@@ -104,20 +104,17 @@ class Extractor:
 			None: None
 		}
 
-		WorkSheet.write(0, 0, "№", StylesDeterminations[Styles.Bold])
-
 		for ColumnIndex in range(len(self.Columns.keys())):
-			WorkSheet.write(0, ColumnIndex + 1, tuple(self.Columns.keys())[ColumnIndex], StylesDeterminations[Styles.Bold])
+			WorkSheet.write(0, ColumnIndex, tuple(self.Columns.keys())[ColumnIndex], StylesDeterminations[Styles.Bold])
 
 		Number = 0
 
 		for User in users:
 			Generators: tuple[Callable] = tuple(self.Columns.values())
-			WorkSheet.write(Number + 1, 0, Number + 1)
 
 			for ColumnIndex in range(len(self.Columns.keys())):
 				Cell: CellData = Generators[ColumnIndex](User)
-				WorkSheet.write(Number + 1, ColumnIndex + 1, Cell.value, StylesDeterminations[Cell.style])
+				WorkSheet.write(Number + 1, ColumnIndex, Cell.value, StylesDeterminations[Cell.style])
 
 			Number += 1
 
