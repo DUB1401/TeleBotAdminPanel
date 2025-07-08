@@ -1,6 +1,7 @@
 from ..UI.ReplyKeyboards import MailingReplyKeyboards
 
-from dublib.TelebotUtils import TeleMaster, UserData, UsersManager
+from dublib.TelebotUtils import UserData, UsersManager
+from dublib.TelebotUtils.Master import Decorators
 
 from threading import Thread
 import random
@@ -122,7 +123,7 @@ class Mailer:
 		self.__Bot = bot
 		self.__MailingThread = None
 
-	TeleMaster.ignore_frecuency_errors
+	@Decorators.ignore_frecuency_errors
 	def send_message(self, admin: UserData, user: UserData):
 		"""
 		Отправляет сообщение пользователю.
