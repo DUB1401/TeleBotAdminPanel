@@ -1,8 +1,8 @@
 from .Moderation import ModerationReplyFunctions
+from ...Core.Moderation import ModeratorsStorage
 from .Uploading import UploadingReplyFunctions
 from ..InlineKeyboards import InlineKeyboards
 from .Mailing import MailingReplyKeyboards
-from ...Core.Moderation import Moderator
 from ...Core.Uploading import Uploader
 from ...Core.Structs import UserInput
 from ...Core.Mailer import Mailer
@@ -23,7 +23,7 @@ class ReplyKeyboards:
 		Menu.add(Mailing, Statistics, row_width = 2)
 		
 		Buffer = list()
-		if Moderator.ENABLED: Buffer.append(types.KeyboardButton("🛡️ Модерация"))
+		if ModeratorsStorage.MODERATORS: Buffer.append(types.KeyboardButton("🛡️ Модерация"))
 		if Uploader.FILES: Buffer.append(types.KeyboardButton("📤 Выгрузка"))
 		Menu.add(*Buffer, row_width = 2)
 

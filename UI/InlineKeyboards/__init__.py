@@ -24,8 +24,6 @@ class InlineKeyboards:
 			admin – администратор.
 		"""
 
-		#---> Генерация кнопочного интерфейса.
-		#==========================================================================================#
 		Menu = types.InlineKeyboardMarkup()
 		OneUser = types.InlineKeyboardButton("Одному пользователю", callback_data = "ap_one_user")
 		Menu.add(OneUser, row_width = 1)

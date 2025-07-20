@@ -4,6 +4,7 @@ from .UI.ReplyKeyboards import ReplyFunctions, ReplyKeyboards
 from .UI.ReplyKeyboards.Mailing import MailingReplyKeyboards
 from .Core.Structs import OptionsStruct, UserInput
 from .UI.InlineKeyboards import InlineKeyboards
+from .Core.Moderation import ModeratorsStorage
 from .Core.Extractor import Extractor
 
 from dublib.TelebotUtils import UserData, UsersManager
@@ -200,6 +201,10 @@ class Procedures:
 				case "🛡️ Модерация": ReplyFunctions.Moderation(bot, users, message)
 
 				case _ : IsReplyButton = False
+
+			if message.text in ModeratorsStorage.get_names():
+				ReplyFunctions.RunModerator(bot, users, message, message.text)
+				IsReplyButton = True
 
 			if IsReplyButton: return True
 
