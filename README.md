@@ -30,7 +30,7 @@ git submodule add https://github.com/DUB1401/TeleBotAdminPanel.git {PATH}
 
 ### Пример инициализации
 ```Python
-from TeleBotAdminPanel.Core.Moderation import Moderator
+from Source.UI.TeleBotAdminPanel.Core.Moderation import Moderator, ModeratorsStorage
 from TeleBotAdminPanel.Core.Uploading import Uploader
 from TeleBotAdminPanel import Panel
 
@@ -43,9 +43,12 @@ Bot = TeleBot(TOKEN)
 Users = UsersManager("Data/Users")
 AdminPanel = Panel(Bot, Users, ADMIN_PASSWORD)
 
-# Опциональное включение модуля модерации контента.
-Moderator.initialize(lambda: ["Unmoderated content."], print)
-# Добавляет файл в систему выгрузки.
+# Опциональное подключение модуля модерации контента.
+Comments = Moderator()
+Comments.extend(["test1", "test2", "test3"])
+ModeratorsStorage.add_moderator(Comments, "Комментарии")
+
+# Добавление файла в систему выгрузки.
 Uploader.set_uploadable_files(["Data/Users.xlsx"])
 
 # Поместить в секцию обработки команд бота.

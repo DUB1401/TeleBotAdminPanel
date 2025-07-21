@@ -1,7 +1,7 @@
 from dublib.CLI.TextStyler import FastStyler
 from dublib.Methods.Data import ToIterable
 
-from typing import Iterable
+from typing import Callable, Iterable
 
 class ModeratorsStorage:
 	"""Хранилище модераторов контента."""
@@ -84,11 +84,15 @@ class Moderator:
 	def items_count(self) -> int:
 		"""Количество строк в очереди на модерацию."""
 
+		self.extend(ToIterable(self.__ContentGetter(), iterable_type = list))
+
 		return len(self.__Items)
 
 	@property
 	def first_item(self) -> str | None:
 		"""Первая строка из очереди модерации."""
+
+		if not self.__Items and self.__ContentGetter: self.extend(ToIterable(self.__ContentGetter(), iterable_type = list))
 
 		return self.__Items[0] if self.__Items else None
 	
@@ -101,26 +105,36 @@ class Moderator:
 
 		pass
 
-	def _ProcessModeration(self, value: str, status: bool):
+	def _ProcessModeration(self, value: str, status: bool, edited_value: str | None = None):
 		"""
 		Переопределите данный метод для обработки модерации. По умолчанию выводит результат модерации в консоль.
 
-		:param value: Отмодерированная строка.
+		:param value: Модерируемая строка.
 		:type value: str
 		:param status: Статус модерации.
 		:type status: bool
+		:param edited_value: Новое значение, если оригинальное модерировалось.
+		:type edited_value: str | None
 		"""
 
 		print(FastStyler("Value:").decorate.bold, value)
 		StatusString = str(status).lower()
 		print(FastStyler("Moderation status:").decorate.bold, FastStyler(StatusString).colorize.green if status else FastStyler(StatusString).colorize.red)
+		if edited_value: print(FastStyler("Edited:").decorate.bold, FastStyler(edited_value).decorate.italic)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self):
-		"""Обработчик модерации контента."""
+	def __init__(self, content_getter: Callable | None = None):
+		"""
+		Обработчик модерации контента.
+
+		:param content_getter: Функция, возвращающая последовательность элементов для модерации.
+		:type content_getter: Callable | None
+		"""
+
+		self.__ContentGetter = content_getter
 
 		self.__Items = list()
 
@@ -137,15 +151,17 @@ class Moderator:
 		self.__Items.extend(ToIterable(items))
 		self.__Items = list(set(self.__Items))
 
-	def catch(self, value: str, status: bool):
+	def catch(self, value: str, status: bool, edited_value: str | None = None):
 		"""
 		В этот метод передаётся результат модерации. Автоматически удаляет первый элемент из последовательности и вызывает `_ProcessModeration()` для дальнейшей обработки.
 
-		:param value: Отмодерированная строка.
+		:param value: Модерируемая строка.
 		:type value: str
 		:param status: Статус модерации.
 		:type status: bool
+		:param edited_value: Новое значение, если оригинальное модерировалось.
+		:type edited_value: str | None
 		"""
 
-		self.__Items.pop(0)
-		self._ProcessModeration(value, status)
+		self.__Items.remove(value)
+		self._ProcessModeration(value, status, edited_value)
