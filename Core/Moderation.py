@@ -91,19 +91,14 @@ class Moderator:
 
 		try: return self.__ContentGetter()[0]
 		except IndexError: pass
-	
+
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _PostInitMethod(self):
-		"""Метод, вызывающийся после инициализации объекта. Предназначен для переопределения."""
-
-		pass
-
-	def _ProcessModeration(self, value: str, status: bool, edited_value: str | None = None):
+	def __PrintModeration(self, value: str, status: bool, edited_value: str | None = None):
 		"""
-		Переопределите данный метод для обработки модерации. По умолчанию выводит результат модерации в консоль.
+		Выводит результат модерации в консоль.
 
 		:param value: Модерируемая строка.
 		:type value: str
@@ -119,22 +114,35 @@ class Moderator:
 
 		StatusString = str(status).lower()
 		print(FastStyler("Moderation status:").decorate.bold, FastStyler(StatusString).colorize.green if status else FastStyler(StatusString).colorize.red)
-		
-		print()
+	
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _PostInitMethod(self):
+		"""Метод, вызывающийся после инициализации объекта. Предназначен для переопределения."""
+
+		pass
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, content_getter: Callable):
+	def __init__(self, content_getter: Callable, callback: Callable | None = None, print: bool = False):
 		"""
 		Обработчик модерации контента.
 
 		:param content_getter: Функция, возвращающая последовательность элементов для модерации.
 		:type content_getter: Callable
+		:param callback: Функция, в которую передаётся результат модерации в виде трёх параметров: `Union[str, bool, str]`. Оригинальная строка, статус модерации, отредактированная строка соответственно.
+		:type callback: Callable | None
+		:param print: Указывает, нужно ли выводить данные модерации в консоль.
+		:type print: bool
 		"""
 
 		self.__ContentGetter = content_getter
+		self.__Callback = callback
+		self.__Print = print
 
 		self._PostInitMethod()
 
@@ -150,4 +158,5 @@ class Moderator:
 		:type edited_value: str | None
 		"""
 
-		self._ProcessModeration(value, status, edited_value)
+		if self.__Print: self.__PrintModeration(value, status, edited_value)
+		if self.__Callback: self.__Callback(value, status, edited_value)
