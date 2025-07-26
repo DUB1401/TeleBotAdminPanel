@@ -1,9 +1,41 @@
+from ...Core.Structs import UserInput, OptionsStruct
 from ...Core.Moderation import ModeratorsStorage
 
-from dublib.TelebotUtils.Users import UsersManager
+from dublib.TelebotUtils.Users import UserData, UsersManager
 from dublib.TelebotUtils.Master import TeleMaster
 
 from telebot import TeleBot, types
+
+def RunModerator(bot: TeleBot, user: UserData, message: types.Message, index: int):
+	"""
+	Запускает модератор.
+
+	:param bot: Бот Telegram.
+	:type bot: TeleBot
+	:param user: Данные пользователя.
+	:type user: UserData
+	:param message: Структура данных сообщения, на которое осуществляется реакция.
+	:type message: types.Message
+	:param index: Индекс модератора.
+	:type index: int
+	"""
+
+	Options = OptionsStruct(user)
+	Options.remember_moderator_index(index)
+	Moderator = ModeratorsStorage.get_moderator_by_index(index)
+
+	Text = Options.get_edited_text(autoremove = False)
+
+	if not Text: 
+		Text = Moderator.first_item
+		Options.set_moderated_value(Text)
+
+	bot.send_message(
+		chat_id = message.chat.id,
+		text = Text,
+		parse_mode = "HTML",
+		reply_markup = ModerationInlineKeyboards.moderation_item(index)
+	)
 
 class ModerationInlineKeyboards:
 	"""Шаблоны Inline-интерфейсов."""
@@ -54,36 +86,38 @@ def ModerationInlineDecorators(bot: TeleBot, users: UsersManager):
 		users – менеджер пользователей.
 	"""
 
+	@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_edit"))
+	def Edit(Call: types.CallbackQuery):
+		User = users.auth(Call.from_user)
+
+		try: bot.answer_callback_query(Call.id)
+		except: pass
+
+		bot.send_message(chat_id = Call.message.chat.id, text = "Отправьте исправленную строку.")
+		User.set_expected_type(UserInput.EditedText.value)
+
 	@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_moderation_start"))
 	def ModerationStart(Call: types.CallbackQuery):
-		TeleMaster(bot).safely_delete_messages(Call.message.chat.id, Call.message.id)
 		ModeratorIndex = int(Call.data[20:])
-		Moderator = ModeratorsStorage.get_moderator_by_index(ModeratorIndex)
-
-		bot.send_message(
-			chat_id = Call.message.chat.id,
-			text = Moderator.first_item,
-			parse_mode = "HTML",
-			reply_markup = ModerationInlineKeyboards.moderation_item(ModeratorIndex)
-		)
+		User = users.auth(Call.from_user)
+		TeleMaster(bot).safely_delete_messages(Call.message.chat.id, Call.message.id)
+		RunModerator(bot, User, Call.message, ModeratorIndex)
 
 	@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_moderate"))
 	def Moderate(Call: types.CallbackQuery):
 		TeleMaster(bot).safely_delete_messages(Call.message.chat.id, Call.message.id)
+		User = users.auth(Call.from_user)
+		Options = OptionsStruct(User)
 
-		Value = Call.message.text
 		Index, Status,  = Call.data[12:].split("_")
 		Index, Status = int(Index), Status == "true"
 
 		Moderator = ModeratorsStorage.get_moderator_by_index(Index)
-		Moderator.catch(Value, Status)
+		Moderator.catch(Options.moderated_value, Status, Options.get_edited_text())
+		Options.set_moderated_value(None)
 
-		if Moderator.items_count: bot.send_message(
-			chat_id = Call.message.chat.id,
-			text = Moderator.first_item,
-			parse_mode = "HTML",
-			reply_markup = ModerationInlineKeyboards.moderation_item(Index)
-		)
+		if Moderator.items_count: 
+			RunModerator(bot, User, Call.message, Index)
 			
 		else: bot.send_message(
 			chat_id = Call.message.chat.id,

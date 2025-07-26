@@ -31,12 +31,12 @@ class ModerationReplyFunctions:
 
 		bot.send_message(
 			chat_id = message.chat.id,
-			text = "Выберите модерируемый контент:",
+			text = "Выберите модерируемый контент.",
 			parse_mode = "HTML",
 			reply_markup = ModerationReplyKeyboards.moderators()
 		)
 
-	def RunModerator(bot: TeleBot, users: UsersManager, message: types.Message, name: str):
+	def ShowModerationCategory(bot: TeleBot, users: UsersManager, message: types.Message, name: str):
 		"""
 		Запускает модератор.
 

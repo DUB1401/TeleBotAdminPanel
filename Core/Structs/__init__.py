@@ -8,3 +8,4 @@ class UserInput(enum.Enum):
 	Message = "ap_message"
 	Sampling = "ap_sampling"
 	Username = "ap_username"
+	EditedText = "ap_edited_text"

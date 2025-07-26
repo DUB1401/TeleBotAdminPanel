@@ -1,4 +1,4 @@
-from .UI.InlineKeyboards.Moderation import ModerationInlineDecorators
+from .UI.InlineKeyboards.Moderation import ModerationInlineDecorators, RunModerator
 from .UI.InlineKeyboards.Uploading import UploadingInlineDecorators
 from .UI.ReplyKeyboards import ReplyFunctions, ReplyKeyboards
 from .UI.ReplyKeyboards.Mailing import MailingReplyKeyboards
@@ -177,9 +177,9 @@ class Procedures:
 
 		User = users.auth(message.from_user)
 		if not User.has_permissions("admin"): return False
-		Options = User.get_property("ap")
+		Options = OptionsStruct(User)
 
-		if Options["is_open"]:
+		if Options.is_open:
 			IsReplyButton = True
 
 			match message.text:
@@ -203,7 +203,9 @@ class Procedures:
 				case _ : IsReplyButton = False
 
 			if message.text in ModeratorsStorage.get_names():
-				ReplyFunctions.RunModerator(bot, users, message, message.text)
+				Index = ModeratorsStorage.get_index_by_name(message.text)
+				Options.remember_moderator_index(Index)
+				ReplyFunctions.ShowModerationCategory(bot, users, message, message.text)
 				IsReplyButton = True
 
 			if IsReplyButton: return True
@@ -246,6 +248,11 @@ class Procedures:
 				text = "Никнейм сохранён.",
 				reply_markup = MailingReplyKeyboards.mailing(User)
 			)
+
+		elif User.expected_type == UserInput.EditedText.value:
+			Options.set_edited_text(message.text)
+			User.reset_expected_type()
+			RunModerator(bot, User, message, Options.moderator_index)
 
 		return True
 

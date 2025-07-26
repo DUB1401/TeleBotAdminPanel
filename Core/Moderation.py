@@ -1,7 +1,6 @@
 from dublib.CLI.TextStyler import FastStyler
-from dublib.Methods.Data import ToIterable
 
-from typing import Callable, Iterable
+from typing import Callable
 
 class ModeratorsStorage:
 	"""Хранилище модераторов контента."""
@@ -84,17 +83,14 @@ class Moderator:
 	def items_count(self) -> int:
 		"""Количество строк в очереди на модерацию."""
 
-		self.extend(ToIterable(self.__ContentGetter(), iterable_type = list))
-
-		return len(self.__Items)
+		return len(self.__ContentGetter())
 
 	@property
 	def first_item(self) -> str | None:
 		"""Первая строка из очереди модерации."""
 
-		if not self.__Items and self.__ContentGetter: self.extend(ToIterable(self.__ContentGetter(), iterable_type = list))
-
-		return self.__Items[0] if self.__Items else None
+		try: return self.__ContentGetter()[0]
+		except IndexError: pass
 	
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -118,38 +114,29 @@ class Moderator:
 		"""
 
 		print(FastStyler("Value:").decorate.bold, value)
+
+		print(FastStyler("Edited value:").decorate.bold, FastStyler(edited_value).decorate.italic if edited_value else FastStyler("false").colorize.red)
+
 		StatusString = str(status).lower()
 		print(FastStyler("Moderation status:").decorate.bold, FastStyler(StatusString).colorize.green if status else FastStyler(StatusString).colorize.red)
-		if edited_value: print(FastStyler("Edited:").decorate.bold, FastStyler(edited_value).decorate.italic)
+		
+		print()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, content_getter: Callable | None = None):
+	def __init__(self, content_getter: Callable):
 		"""
 		Обработчик модерации контента.
 
 		:param content_getter: Функция, возвращающая последовательность элементов для модерации.
-		:type content_getter: Callable | None
+		:type content_getter: Callable
 		"""
 
 		self.__ContentGetter = content_getter
 
-		self.__Items = list()
-
 		self._PostInitMethod()
-
-	def extend(self, items: Iterable[str] | str):
-		"""
-		Добавляет элементы в последовательность для модерации. Дубликаты удаляются.
-
-		:param items: Несколько или один элемент для модерации.
-		:type items: Iterable[str] | str
-		"""
-
-		self.__Items.extend(ToIterable(items))
-		self.__Items = list(set(self.__Items))
 
 	def catch(self, value: str, status: bool, edited_value: str | None = None):
 		"""
@@ -163,5 +150,4 @@ class Moderator:
 		:type edited_value: str | None
 		"""
 
-		self.__Items.remove(value)
 		self._ProcessModeration(value, status, edited_value)

@@ -216,6 +216,17 @@ class OptionsStruct:
 		"""Данные рассылки."""
 
 		return self.__Mailing
+	
+	@property
+	def moderated_value(self) -> str | None:
+
+		return self.__Data["moderated_value"]
+
+	@property
+	def moderator_index(self) -> int | None:
+		"""Данные рассылки."""
+
+		return self.__Data["moderator_index"]
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -227,9 +238,11 @@ class OptionsStruct:
 		if self.__User.has_property("ap"):
 			Data: dict[str, Any] = self.__User.get_property("ap")
 
-			for Key in self.__Data.keys():
-				if Key not in Data.keys(): Data[Key] = self.__Data[Key]
+			for Key in self.__Data:
+				if Key not in Data: Data[Key] = self.__Data[Key]
 
+			self.__Data = Data
+			
 		else: self.save()
 
 	#==========================================================================================#
@@ -256,12 +269,28 @@ class OptionsStruct:
 			"button_label": None,
 			"button_link": None,
 			"temp_mailing_caption": None,
-			"temp_mailing_content": []
+			"temp_mailing_content": [],
+
+			"moderated_value": None,
+			"moderator_index": None,
+			"edited_text": None,
 		}
 
 		self.__ParseData()
 		
 		self.__Mailing = MailingData(self, self.__Data)
+
+	def __getitem__(self, key: str) -> Any:
+		"""
+		Возвращает значение параметра.
+
+		:param key: Ключ параметра.
+		:type key: str
+		:return: Значение параметра.
+		:rtype: Any
+		"""
+
+		return self.__Data[key]
 
 	def save(self):
 		"""Сохраняет параметры."""
@@ -278,3 +307,57 @@ class OptionsStruct:
 
 		self.__Data["is_open"] = status
 		self.save()
+
+	#==========================================================================================#
+	# >>>>> МЕТОДЫ ВЗАИМОДЕЙСТВИЯ С МОДЕРАТОРАМИ <<<<< #
+	#==========================================================================================#
+
+	def drop_moderator_index(self):
+		"""Сбрасывает индекс модератора."""
+
+		if "moderator_index" in self.__Data.keys(): del self.__Data["moderator_index"]
+		self.save()
+
+	def remember_moderator_index(self, index: int):
+		"""
+		Запоминает индекс текущего модератора.
+
+		:param index: Индекс модератора.
+		:type index: int
+		"""
+
+		self.__Data["moderator_index"] = index
+		self.save()
+
+	def set_moderated_value(self, value: str | None):
+		self.__Data["moderated_value"] = value
+		self.save()
+
+	def set_edited_text(self, text: str):
+		"""
+		Сохраняет отредактированный текст.
+
+		:param text: Отредактированный текст.
+		:type text: str
+		"""
+
+		self.__Data["edited_text"] = text
+		self.save()
+
+	def get_edited_text(self, autoremove: bool = True) -> str | None:
+		"""
+		Возвращает отредактированный текст.
+
+		:param autoremove: Указывает, нужно ли удалить текст из свойств пользователя после вызова метода.
+		:type autoremove: bool
+		:return: Отредактированный текст или `None` в случае отсутствия оного.
+		:rtype: str
+		"""
+
+		Text = self.__Data["edited_text"]
+
+		if autoremove and Text: 
+			self.__Data["edited_text"] = None
+			self.save()
+
+		return Text

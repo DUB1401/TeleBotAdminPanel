@@ -44,8 +44,7 @@ Users = UsersManager("Data/Users")
 AdminPanel = Panel(Bot, Users, ADMIN_PASSWORD)
 
 # Опциональное подключение модуля модерации контента.
-Comments = Moderator()
-Comments.extend(["test1", "test2", "test3"])
+Comments = Moderator(lambda: ["Я комментарий"])
 ModeratorsStorage.add_moderator(Comments, "Комментарии")
 
 # Добавление файла в систему выгрузки.
