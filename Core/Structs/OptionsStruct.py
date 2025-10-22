@@ -54,14 +54,14 @@ class MailingData:
 		"""
 		Прикрепляет вложение.
 
-		:param type: Строковый идентификатор типа файла: *document*, *photo*, *video* или *audio*.
+		:param type: Строковый идентификатор типа файла: *document*, *photo*, *video*, *audio* или *animation*.
 		:type type: str
 		:param file_id: Идентификатор файла.
 		:type file_id: str
 		:raises ValueError: Выбрасывается при указании неподдерживаемого типа.
 		"""
 
-		if type not in ("document", "photo", "video", "audio"): raise ValueError(f"Unsupportable type \"{type}\".")
+		if type not in ("document", "photo", "video", "audio", "animation"): raise ValueError(f"Unsupportable type \"{type}\".")
 		self.__Data["mailing_content"].append({"type": type, "file_id": file_id})
 		self.__Options.save()
 
@@ -102,7 +102,7 @@ class MailingData:
 		:type status: bool
 		"""
 
-		self.__Data["mailing"] = status
+		self.__Data["is_mailing"] = status
 		self.__Options.save()
 
 	def stash(self):

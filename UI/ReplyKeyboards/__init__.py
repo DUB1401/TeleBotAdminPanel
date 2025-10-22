@@ -137,7 +137,7 @@ class ReplyFunctions(ModerationReplyFunctions, UploadingReplyFunctions):
 		"""
 		
 		User = users.auth(message.from_user)
-		User.set_object("mailer", Mailer(bot))
+		User.attach_object("mailer", Mailer(bot))
 		Options = User.get_property("ap")
 
 		if not Options["mailing_caption"] and not Options["mailing_content"]:

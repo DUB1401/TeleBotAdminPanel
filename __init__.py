@@ -213,8 +213,8 @@ class Procedures:
 		if not User.expected_type or not User.expected_type.startswith("ap_"): return False
 
 		if User.expected_type == UserInput.Message.value:
-			Options["mailing_caption"] = message.html_text
-			User.set_property("ap", Options)
+			Options.mailing.set_caption(message.html_text)
+			Options.save()
 
 		elif User.expected_type == UserInput.ButtonLabel.value:
 			Options["button_label"] = message.text
@@ -240,8 +240,7 @@ class Procedures:
 			Username = message.text.lstrip("@")
 			if Username.startswith("https://t.me/"): Username = Username[len("https://t.me/"):]
 
-			Options["sampling"] = Username
-			User.set_property("ap", Options)
+			Options.mailing.set_sampling(Username)
 			User.set_expected_type(None)
 			bot.send_message(
 				chat_id = message.chat.id,
@@ -265,12 +264,13 @@ class Procedures:
 		"""
 
 		if user.has_permissions("admin") and user.expected_type == UserInput.Message.value:
-			Options = user.get_property("ap")
-			if message.caption: Options["mailing_caption"] = message.html_caption
-			if message.content_type == "audio": Options["mailing_content"].append({"type": "audio", "file_id": message.audio.file_id})
-			elif message.content_type == "document": Options["mailing_content"].append({"type": "document", "file_id": message.document.file_id})
-			elif message.content_type == "video": Options["mailing_content"].append({"type": "video", "file_id": message.video.file_id})
-			elif message.content_type == "photo": Options["mailing_content"].append({"type": "photo", "file_id": message.photo[-1].file_id})
+			Options = OptionsStruct(user)
+			if message.caption: Options.mailing.set_caption(message.html_caption)
+			if message.content_type == "audio": Options.mailing.add_attachment("audio", message.audio.file_id)
+			elif message.content_type == "document": Options.mailing.add_attachment("document", message.document.file_id)
+			elif message.content_type == "video": Options.mailing.add_attachment("video", message.video.file_id)
+			elif message.content_type == "photo": Options.mailing.add_attachment("photo", message.photo[-1].file_id)
+			elif message.content_type == "animation": Options.mailing.add_attachment("animation", message.animation.file_id)
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #

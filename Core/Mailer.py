@@ -1,15 +1,64 @@
 from ..UI.ReplyKeyboards import MailingReplyKeyboards
+from .Structs.OptionsStruct import OptionsStruct
 
 from dublib.TelebotUtils import UserData, UsersManager
 from dublib.TelebotUtils.Master import Decorators
 
 from threading import Thread
+from time import sleep
 import random
 
 from telebot import TeleBot, types
 
 class Mailer:
 	"""Рассыльщик."""
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ ШАБЛОНЫ <<<<< #
+	#==========================================================================================#
+
+	@Decorators.ignore_frecuency_errors
+	def __EndReport(self, admin: UserData):
+		"""
+		Завершает отчёт.
+
+		:param admin: Данные администратора.
+		:type admin: UserData
+		"""
+
+		self.__Bot.send_message(
+			chat_id = admin.id,
+			text = "Рассылка завершена.",
+			reply_markup = MailingReplyKeyboards.mailing(admin)
+		)
+
+	@Decorators.ignore_frecuency_errors
+	def __UpdateReport(self, admin: UserData, message_id: int, progress: float, index: int, targets_count: int, sended: int, errors_count: int):
+		"""
+		Обновляет отчёт о рассылке.
+
+		:param admin: Данные администратора.
+		:type admin: UserData
+		:param message_id: ID сообщения.
+		:type message_id: int
+		:param progress: Процент прогресса.
+		:type progress: float
+		:param index: Индекс операции.
+		:type index: int
+		:param targets_count: Количество целей.
+		:type targets_count: int
+		:param sended: Количество отправленных сообщений.
+		:type sended: int
+		:param errors_count: Количество ошибок.
+		:type errors_count: int
+		"""
+
+		self.__Bot.edit_message_text(
+			chat_id = admin.id,
+			message_id = message_id,
+			text = f"<b>📨 Рассылка</b>\n\n⏳ Прогресс: {progress}% ({index + 1} из {targets_count})\n✉️ Отправлено: {sended}\n❌ Ошибок: {errors_count}",
+			parse_mode = "HTML"
+		)
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -42,6 +91,7 @@ class Mailer:
 			if File["type"] == "video": MediaGroup.append(types.InputMediaVideo(media = File["file_id"], caption = Caption))
 			if File["type"] == "audio": MediaGroup.append(types.InputMediaAudio(media = File["file_id"], caption = Caption))
 			if File["type"] == "document": MediaGroup.append(types.InputMediaDocument(media = File["file_id"], caption = Caption))
+			if File["type"] == "animation": MediaGroup.append(types.InputMediaAnimation(media = File["file_id"], caption = Caption))
 
 		return MediaGroup
 
@@ -66,47 +116,35 @@ class Mailer:
 			parse_mode = "HTML"
 		).id
 
-		Options = admin.get_property("ap")
+		Options = OptionsStruct(admin)
 
 		for Index in range(len(targets)):
-			if Options["mailing"] == None: break
 
 			try:
-				if not targets[Index].is_chat_forbidden: self.send_message(admin, targets[Index])
+				if not targets[Index].is_chat_forbidden and "reloc" not in targets[Index].flags:
+					self.send_message(admin, targets[Index])
+					targets[Index].add_flags("reloc")
+					sleep(2)
+
 				else: continue
 
 			except: 
-				Options["mailing"] = False
-				admin.set_property("ap", Options)
+				Options.mailing.set_status(False)
 				Errors += 1
 				return
+			
 			else: Sended += 1
 
 			Progress = (Sended + Errors) / len(targets) * 100
 			Progress = round(Progress, 2)
 			if str(Progress).endswith(".0"): Progress = int(Progress)
-			
-			self.__Bot.edit_message_text(
-				chat_id = admin.id,
-				message_id = MessageID,
-				text = f"<b>📨 Рассылка</b>\n\n⏳ Прогресс: {Progress}% ({Index + 1} из {len(targets)})\n✉️ Отправлено: {Sended}\n❌ Ошибок: {Errors}",
-				parse_mode = "HTML"
-			)
+			print(f"Прогресс: {Progress}. Отправлено: {Sended}. Ошибок: {Errors}.")
+			# if type(Progress) == int: self.__UpdateReport(admin, MessageID, Progress, Index, len(targets), Sended, Errors)
 
-		Options["mailing"] = False
-		admin.set_property("ap", Options)
+		Options.mailing.set_status(False)
 
-		self.__Bot.edit_message_text(
-			chat_id = admin.id,
-			message_id = MessageID,
-			text = f"<b>📨 Рассылка</b>\n\n⏳ Прогресс: {Progress}% ({Index + 1} из {len(targets)})\n✉️ Отправлено: {Sended}\n❌ Ошибок: {Errors}",
-			parse_mode = "HTML"
-		)
-		self.__Bot.send_message(
-			chat_id = admin.id,
-			text = "Рассылка завершена.",
-			reply_markup = MailingReplyKeyboards.mailing(admin)
-		)
+		# self.__UpdateReport(admin, MessageID, Progress, Index, len(targets), Sended, Errors)
+		# self.__EndReport(admin)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -123,7 +161,7 @@ class Mailer:
 		self.__Bot = bot
 		self.__MailingThread = None
 
-	@Decorators.ignore_frecuency_errors
+	# @Decorators.ignore_frecuency_errors
 	def send_message(self, admin: UserData, user: UserData):
 		"""
 		Отправляет сообщение пользователю.
@@ -140,7 +178,8 @@ class Mailer:
 			"photo": self.__Bot.send_photo,
 			"video": self.__Bot.send_video,
 			"audio": self.__Bot.send_audio,
-			"document": self.__Bot.send_document
+			"document": self.__Bot.send_document,
+			"animation": self.__Bot.send_animation
 		}
 
 		try:
@@ -192,10 +231,13 @@ class Mailer:
 
 			for User in users_manager.users:
 
-				if User.username == Sampling: 
-					try: self.send_message(admin, User)
+				if User.username and User.username.lower() == Sampling.lower(): 
+					try:
+						self.send_message(admin, User)
+						IsSended = True
+
 					except: User.set_chat_forbidden(True)
-					else: IsSended = True
+
 					break
 
 			if IsSended: self.__Bot.send_message(admin.id, f"✅ Сообщение отправлено пользователю @{Sampling}.")
