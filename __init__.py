@@ -10,6 +10,7 @@ from .Core.Extractor import Extractor
 from dublib.TelebotUtils import UserData, UsersManager
 
 from datetime import datetime
+from typing import Callable
 import os
 
 from telebot import TeleBot, types
@@ -167,6 +168,16 @@ class Keyboards:
 class Procedures:
 	"""Наборы процедур."""
 
+	def __init__(self, panel: "Panel"):
+		"""
+		Наборы декораторов.
+
+		:param panel: Панель управления.
+		:type panel: Panel
+		"""
+
+		self.__Panel = panel
+
 	def text(self, bot: TeleBot, users: UsersManager, message: types.Message) -> bool:
 		"""
 		Набор процедур: текст.
@@ -186,7 +197,9 @@ class Procedures:
 				case "🎯 Выборка": ReplyFunctions.Selection(bot, users, message)
 				case "🕹️ Добавить кнопку": ReplyFunctions.AddButton(bot, users, message)
 				case "✅ Завершить": ReplyFunctions.Done(bot, users, message)
-				case "❌ Закрыть": ReplyFunctions.Close(bot, users, message)
+				case "❌ Закрыть":
+					ReplyFunctions.Close(bot, users, message)
+					self.__Panel.close_callback()
 				case "🟢 Запустить": ReplyFunctions.StartMailing(bot, users, message)
 				case "↩️ Назад": ReplyFunctions.Back(bot, users, message)
 				case "❌ Отмена": ReplyFunctions.Cancel(bot, users, message)
@@ -279,6 +292,20 @@ class Procedures:
 class Panel:
 	"""Панель управления."""
 
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def close_callback(self) -> Callable | None:
+		"""Функция, вызываемая при закрытии панели администрирования."""
+
+		return self.__CloseCallback
+	
+	#==========================================================================================#
+	# >>>>> КОНТЕЙНЕРЫ <<<<< #
+	#==========================================================================================#
+
 	@property
 	def decorators(self) -> Decorators:
 		"""Наборы декораторов."""
@@ -303,6 +330,10 @@ class Panel:
 
 		return self.__Procedures
 
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
 	def __init__(self, bot: TeleBot, users_manager: UsersManager, password: str):
 		"""
 		Панель управления.
@@ -319,4 +350,16 @@ class Panel:
 
 		self.__Decorators = Decorators(self, bot, users_manager)
 		self.__Keyboards = Keyboards()
-		self.__Procedures = Procedures()
+		self.__Procedures = Procedures(self)
+
+		self.__CloseCallback: Callable | None = None
+
+	def set_close_callback(self, callback: Callable | None):
+		"""
+		Задаёт Callback-функцию, вызываемую при закрытии панели.
+
+		:param callback: Вызываемая функция.
+		:type callback: Callable | None
+		"""
+
+		self.__CloseCallback = callback
