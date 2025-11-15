@@ -270,7 +270,6 @@ class ReplyFunctions(ModerationReplyFunctions, UploadingReplyFunctions):
 			users – менеджер пользователей;\n
 			message – сообщение от пользователя.
 		"""
-		User = users.auth(message.from_user)
 
 		UsersCount = len(users.users)
 		BlockedUsersCount = 0

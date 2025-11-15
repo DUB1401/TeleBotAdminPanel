@@ -65,7 +65,7 @@ def Text(Message: types.Message):
 AdminPanel.decorators.inline_keyboards()
 
 # Обработка вложений.
-@Bot.message_handler(content_types = ["audio", "document", "video", "photo"])
+@Bot.message_handler(content_types = ["animation", "audio", "document", "photo", "video"])
 def File(Message: types.Message):
 	User = Users.auth(Message.from_user)
 	# Если процедура сработала, прервать обработку.
