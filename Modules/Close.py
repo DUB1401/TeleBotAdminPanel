@@ -18,5 +18,5 @@ class SM_Close(BaseModule):
 		:type user: UserData
 		"""
 
-		self._Panel.close(user)
 		self._Panel.bot.send_message(user.id, "Панель управления закрыта.", reply_markup = types.ReplyKeyboardRemove())
+		self._Panel.close(user)

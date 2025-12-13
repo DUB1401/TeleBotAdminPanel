@@ -152,6 +152,7 @@ class SM_Moderation(BaseModule):
 		ModuleData = ModerationOptions(User)
 
 		match message.text:
+			
 			case "↩️ Назад":
 				ModuleData.set_value(None)
 				ModuleData.set_current_moderator(None)

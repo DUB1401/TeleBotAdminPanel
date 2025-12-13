@@ -36,11 +36,11 @@ class Tree:
 		:return: Словарь слоя.
 		:rtype: dict
 		"""
-
-		path = path.value
+		
+		path: str = path.value
 		if not path: return self.__Tree
 
-		Keys = path.value.split("/")
+		Keys = path.split("/")
 		Current = self.__Tree
 		for Key in Keys: Current = Current[Key]
 		if type(Current) != dict: raise TypeError("Path must point to dictionary.")

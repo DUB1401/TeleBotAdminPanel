@@ -50,6 +50,7 @@ class Path:
 
 		Path = self.as_str() + "/" + catalog
 		self.__Path = Path.strip("/")
+		self.__Options.set_path(self.__Path)
 
 		return self.as_str()
 
@@ -75,7 +76,7 @@ class Path:
 
 			else: self.__Path = None
 
-		self.__Options.save()
+		self.__Options.set_path(self.__Path)
 
 		return self.as_str()
 
@@ -102,7 +103,7 @@ class PanelOptions:
 	def path(self) -> Path:
 		"""Путь к слою в древе."""
 
-		return self.__Data["path"]
+		return Path(self, self.__Data["path"])
 	
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -121,7 +122,6 @@ class PanelOptions:
 					Data[Key] = self.__Data[Key]
 					Edited = True
 
-			Data["path"] = Path(self, Data["path"])
 			self.__Data = Data
 			if Edited: self.save()
 			
@@ -143,7 +143,7 @@ class PanelOptions:
 
 		self.__Data = {
 			"is_open": False,
-			"path": Path(self, None),
+			"path": None,
 			
 			"current_module": None,
 			"modules_data": dict()
@@ -154,9 +154,7 @@ class PanelOptions:
 	def save(self):
 		"""Сохраняет параметры."""
 
-		Buffer = self.__Data.copy()
-		Buffer["path"] = Zerotify(Buffer["path"].as_str())
-
+		Buffer = self.__Data
 		self.__User.set_property("ap", Buffer)
 
 	def set_current_module(self, module: str | None):
@@ -179,6 +177,17 @@ class PanelOptions:
 		"""
 
 		self.__Data["is_open"] = status
+		self.save()
+
+	def set_path(self, path: str):
+		"""
+		Задаёт путь в древе навигации. Для манипуляции рекомендуется использовать свойство-асбтракцию вместо этого метода.
+
+		:param path: Путь в древе.
+		:type path: str
+		"""
+
+		self.__Data["path"] = path
 		self.save()
 
 	#==========================================================================================#

@@ -148,15 +148,15 @@ class SM_Statistics(BaseModule):
 			None: None
 		}
 
-		for ColumnIndex in range(len(self.Columns.keys())):
-			WorkSheet.write(0, ColumnIndex, tuple(self.Columns.keys())[ColumnIndex], StylesDeterminations[Styles.Bold])
+		for ColumnIndex in range(len(self.__Columns.keys())):
+			WorkSheet.write(0, ColumnIndex, tuple(self.__Columns.keys())[ColumnIndex], StylesDeterminations[Styles.Bold])
 
 		Number = 0
 
 		for User in users:
-			Generators: tuple[Callable] = tuple(self.Columns.values())
+			Generators: tuple[Callable] = tuple(self.__Columns.values())
 
-			for ColumnIndex in range(len(self.Columns.keys())):
+			for ColumnIndex in range(len(self.__Columns.keys())):
 				Cell: CellData = Generators[ColumnIndex](User)
 				WorkSheet.write(Number + 1, ColumnIndex, Cell.value, StylesDeterminations[Cell.style])
 

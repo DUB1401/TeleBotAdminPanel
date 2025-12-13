@@ -84,11 +84,27 @@ class Procedures:
 
 		Layer = self.__Panel.tree.get_layer_by_path(Options.path) if Options.path else self.__Panel.tree.data
 
+		if Options.path.value and message.text == "↩️ Назад":
+			Options.path.up()
+			self.__Bot.send_message(
+				chat_id = User.id,
+				text = f"Переход в предыдущий каталог.",
+				reply_markup = self.__Panel.get_current_layer_reply_markup(User)
+			)
+
 		for Element in Layer:
 			if message.text == Element:
 
 				if type(Layer[Element]) == dict:
+					# Не имплементировано.
+					#return
 					Options.path.append(Element)
+					self.__Bot.send_message(
+						chat_id = User.id,
+						text = f"Переход в каталог <b>{Element}</b>.",
+						parse_mode = "HTML",
+						reply_markup = self.__Panel.get_current_layer_reply_markup(User)
+					)
 
 				else:
 					Options.set_current_module(Layer[Element].__name__)
@@ -179,10 +195,11 @@ class Panel:
 		:rtype: types.ReplyKeyboardMarkup
 		"""
 
-		path = path.value
-		Layer = self.__Tree.get_layer_by_path(path) if path else self.__Tree.data
+		Layer = self.__Tree.get_layer_by_path(path) if path.value else self.__Tree.data
+		
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
 		for Element in Layer: Menu.add(types.KeyboardButton(Element))
+		if path.value: Menu.add(types.KeyboardButton("↩️ Назад"))
 
 		return Menu
 
@@ -237,6 +254,7 @@ class Panel:
 		self.__Procedures = Procedures(self)
 
 		self.__CloseCallback: Callable | None = None
+		self.__CallbackArguments = tuple()
 		self.__Modules = dict()
 		self.__Tree = Tree()
 		self.__WorkDirectory = ".tbap"
@@ -254,7 +272,7 @@ class Panel:
 		Options: PanelOptions = user.get_object("ap_options")
 		Options.set_current_module(None)
 		Options.set_open_state(False)
-		if self.__CloseCallback: self.__CloseCallback()
+		if self.__CloseCallback: self.__CloseCallback(user, self.__CallbackArguments)
 
 	def get_current_layer_reply_markup(self, user: "UserData") -> types.ReplyKeyboardMarkup:
 		"""
@@ -266,7 +284,7 @@ class Panel:
 		:rtype: types.ReplyKeyboardMarkup
 		"""
 
-		Options: PanelOptions = user.get_object("ap_options")
+		Options: PanelOptions = self.load_options_for_user(user)
 
 		return self.__BuilReplyMarkupForLayer(Options.path)
 
@@ -325,7 +343,7 @@ class Panel:
 		:type text: str
 		"""
 
-		Options = self.load_options_for_user(user)
+		Options: PanelOptions = self.load_options_for_user(user)
 		Options.set_open_state(True)
 		Options.set_current_module(None)
 
@@ -336,15 +354,18 @@ class Panel:
 			reply_markup = self.__BuilReplyMarkupForLayer(Options.path)
 		)
 
-	def set_close_callback(self, callback: Callable | None):
+	def set_close_callback(self, callback: Callable | None, args: tuple | None = None):
 		"""
 		Задаёт Callback-функцию, вызываемую при закрытии панели.
 
-		:param callback: Вызываемая функция.
+		:param callback: Вызываемая функция, принимающая в качестве первого аргумента структуру `UserData`, а второго – набор дополнительных аргументов.
 		:type callback: Callable | None
+		:param args: Набор дополнительных аргументов.
+		:type args: tuple | None
 		"""
 
 		self.__CloseCallback = callback
+		self.__CallbackArguments = args or tuple()
 
 	def set_tree(self, tree: dict):
 		"""
