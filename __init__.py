@@ -1,172 +1,26 @@
-from .UI.InlineKeyboards.Moderation import ModerationInlineDecorators, RunModerator
-from .UI.InlineKeyboards.Uploading import UploadingInlineDecorators
-from .UI.ReplyKeyboards import ReplyFunctions, ReplyKeyboards
-from .UI.ReplyKeyboards.Mailing import MailingReplyKeyboards
-from .Core.Structs import OptionsStruct, UserInput
-from .UI.InlineKeyboards import InlineKeyboards
-from .Core.Moderation import ModeratorsStorage
-from .Core.Extractor import Extractor
+from .Core.PanelOptions import PanelOptions
+from .Core.Tree import Tree
 
-from dublib.TelebotUtils import UserData, UsersManager
+from dublib.TelebotUtils import TeleMaster
 
-from datetime import datetime
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
+from os import PathLike
 import os
 
 from telebot import TeleBot, types
 
+if TYPE_CHECKING:
+	from .Core.BaseModule import BaseModule
+	from .Core.PanelOptions import Path
+
+	from dublib.TelebotUtils import UserData, UsersManager
+
 #==========================================================================================#
-# >>>>> СТРУКТУРЫ <<<<< #
+# >>>>> КОНТЕЙНЕРЫ ОБРАБОТЧИКОВ ВЗАИМОДЕЙСТВИЙ <<<<< #
 #==========================================================================================#
 
 class Decorators:
 	"""Наборы декораторов."""
-
-	def __init__(self, panel: "Panel", bot: TeleBot, users_manager: UsersManager):
-		"""
-		Наборы декораторов.
-
-		:param panel: Панель управления.
-		:type panel: Panel
-		:param bot: Бот Telegram.
-		:type bot: TeleBot
-		:param users_manager: Менеджер пользователей.
-		:type users_manager: UsersManager
-		"""
-
-		self.__Panel = panel
-		self.__Bot = bot
-		self.__UsersManager = users_manager
-
-	def commands(self):
-		"""Набор декораторов: команды."""
-
-		@self.__Bot.message_handler(commands = ["admin"])
-		def CommandAdmin(Message: types.Message):
-			User = self.__UsersManager.auth(Message.from_user)
-			Options = OptionsStruct(User)
-			Options.set_open_state(True)
-
-			MessageWords = Message.text.split(" ")
-
-			if not User.has_permissions("admin") and len(MessageWords) == 2:
-				User.add_permissions("admin")
-
-				if MessageWords[1] == self.__Panel.password:
-					self.__Bot.send_message(
-						chat_id = Message.chat.id,
-						text = "Пароль принят. Доступ разрешён.",
-						reply_markup = ReplyKeyboards.admin()
-					)
-
-				else: self.__Bot.send_message(Message.chat.id, "Неверный пароль.")
-
-			else:
-
-				if User.has_permissions("admin"):
-					self.__Bot.send_message(
-						chat_id = Message.chat.id,
-						text = "Доступ разрешён.",
-						reply_markup = ReplyKeyboards.admin()
-					)
-
-				else: self.__Bot.send_message(Message.chat.id, "Доступ запрещён.")
-
-	def files(self):
-		"""Набор декораторов: файлы."""
-
-		@self.__Bot.message_handler(content_types = ["audio", "document", "photo", "video"])
-		def Files(Message: types.Message):
-			User = self.__UsersManager.auth(Message.from_user)
-			Options = OptionsStruct(User)
-
-			if User.has_permissions("admin") and User.expected_type == UserInput.Message.value:
-				if Message.caption: Options.mailing.set_caption(Message.html_caption)
-
-				match Message.content_type:
-					case "audio": Options.mailing.add_attachment("audio", Message.audio.file_id)
-					case "document": Options.mailing.add_attachment("document", Message.document.file_id)
-					case "video": Options.mailing.add_attachment("video", Message.video.file_id)
-					case "photo": Options.mailing.add_attachment("photo", Message.photo[-1].file_id)
-
-	def inline_keyboards(self):
-		"""Набор декораторов: Inline-кнопки."""
-
-		@self.__Bot.callback_query_handler(func = lambda Callback: Callback.data == "ap_delete")
-		def Delete(Call: types.CallbackQuery):
-			self.__Bot.delete_message(Call.message.chat.id, Call.message.id)
-
-		@self.__Bot.callback_query_handler(func = lambda Callback: Callback.data == "ap_extract")
-		def Extract(Call: types.CallbackQuery):
-			User = self.__UsersManager.auth(Call.from_user)
-			Date = datetime.now().date().strftime("%d.%m.%Y")
-			Filename = f"{Date}.xlsx"
-			Extractor().generate_file(Filename, self.__UsersManager.users)
-
-			try:
-				self.__Bot.delete_message(User.id, Call.message.id)
-				self.__Bot.send_document(
-					chat_id = User.id,
-					document = open(Filename, "rb"), 
-					caption = f"Выписка из статистики бота за {Date}. Данный файл совместим с системой <a href=\"https://github.com/DUB1401/SpamBot\">SpamBot</a>.",
-					parse_mode = "HTML"
-				)
-				os.remove(Filename)
-
-			except Exception as ExceptionData: print(ExceptionData)
-
-		@self.__Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_sampling"))
-		def Sampling(Call: types.CallbackQuery):
-			User = self.__UsersManager.auth(Call.from_user)
-			Options = OptionsStruct(User)
-
-			if Call.data.endswith("all"): Options.mailing.set_sampling(None)
-			elif Call.data.endswith("last"): Options.mailing.set_sampling(1000)
-
-			self.__Bot.answer_callback_query(Call.id)
-			self.__Bot.delete_message(chat_id = User.id, message_id = Call.message.id)
-
-			if not Call.data.endswith("cancel"): self.__Bot.send_message(
-				chat_id = User.id,
-				text = "Выборка установлена.",
-				reply_markup = MailingReplyKeyboards.mailing(User)
-			)
-				
-			else: User.set_expected_type(None)
-
-		@self.__Bot.callback_query_handler(func = lambda Callback: Callback.data == "ap_one_user")
-		def SamplingOneUser(Call: types.CallbackQuery):
-			User = self.__UsersManager.auth(Call.from_user)
-			self.__Bot.send_message(User.id, "Отправьте полный ник пользователя или ссылку на него.", reply_markup = ReplyKeyboards.cancel())
-			User.set_expected_type(UserInput.Username.value)
-			self.__Bot.answer_callback_query(Call.id)
-
-		ModerationInlineDecorators(self.__Bot, self.__UsersManager)
-		UploadingInlineDecorators(self.__Bot, self.__UsersManager)
-		
-class Keyboards:
-	"""Контейнер разметок кнопок."""
-
-	@property
-	def inline(self) -> types.InlineKeyboardMarkup:
-		"""Inline-разметки кнопок."""
-
-		return self.__Inline
-
-	@property
-	def reply(self) -> types.ReplyKeyboardMarkup:
-		"""Reply-разметки кнопок."""
-
-		return self.__Reply
-
-	def __init__(self):
-		"""Контейнер разметок кнопок."""
-
-		self.__Inline = InlineKeyboards()
-		self.__Reply = ReplyKeyboards
-
-class Procedures:
-	"""Наборы процедур."""
 
 	def __init__(self, panel: "Panel"):
 		"""
@@ -178,112 +32,69 @@ class Procedures:
 
 		self.__Panel = panel
 
-	def text(self, bot: TeleBot, users: UsersManager, message: types.Message) -> bool:
+		self.__UsersManager = self.__Panel.users_manager
+		self.__Bot = self.__Panel.bot
+
+	def inline_keyboards(self):
+		"""Набор декораторов: Inline-кнопки."""
+
+		@self.__Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ap_"))
+		def Callback(Call: types.CallbackQuery):
+			User = self.__UsersManager.auth(Call.from_user)
+			Options = self.__Panel.load_options_for_user(User)
+
+			if Options.current_module:
+				ModuleObject: "BaseModule" = self.__Panel.get_module_object(Options.current_module)
+				ModuleObject.process_call(Call)
+
+class Procedures:
+	"""Наборы процедур."""
+
+	def __init__(self, panel: "Panel"):
 		"""
-		Набор процедур: текст.
-			bot – экземпляр бота;\n
-			users – менеджер пользователей;\n
-			message – сообщение.
+		Наборы процедур.
+
+		:param panel: Панель управления.
+		:type panel: Panel
 		"""
 
-		User = users.auth(message.from_user)
-		if not User.has_permissions("admin"): return False
-		Options = OptionsStruct(User)
+		self.__Panel = panel
 
-		if Options.is_open:
-			IsReplyButton = True
+		self.__UsersManager = self.__Panel.users_manager
+		self.__Bot = self.__Panel.bot
 
-			match message.text:
-				case "🎯 Выборка": ReplyFunctions.Selection(bot, users, message)
-				case "🕹️ Добавить кнопку": ReplyFunctions.AddButton(bot, users, message)
-				case "✅ Завершить": ReplyFunctions.Done(bot, users, message)
-				case "❌ Закрыть":
-					ReplyFunctions.Close(bot, users, message)
-					self.__Panel.close_callback()
-				case "🟢 Запустить": ReplyFunctions.StartMailing(bot, users, message)
-				case "↩️ Назад": ReplyFunctions.Back(bot, users, message)
-				case "❌ Отмена": ReplyFunctions.Cancel(bot, users, message)
-				case "🔴 Остановить": ReplyFunctions.StopMailing(bot, users, message)
-				case "🔎 Просмотр": ReplyFunctions.View(bot, users, message)
-				case "👤 Рассылка": ReplyFunctions.Mailing(bot, users, message)
-				case "✏️ Редактировать": ReplyFunctions.Edit(bot, users, message)
-				case "📊 Статистика": ReplyFunctions.Statistics(bot, users, message)
-				case "🕹️ Удалить кнопку": ReplyFunctions.RemoveButton(bot, users, message)
+	def text(self, message: types.Message) -> bool:
+		"""
+		Обрабатывает сообщение.
 
-				case "📤 Выгрузка": ReplyFunctions.Uploading(bot, users, message)
-				case "🛡️ Модерация": ReplyFunctions.Moderation(bot, users, message)
+		:param message: Данные сообщения.
+		:type message: types.Message
+		:return: Возвращает `True`, если сообщение предназначалось для обработки панелью.
+		:rtype: bool
+		"""
 
-				case _ : IsReplyButton = False
+		User = self.__UsersManager.auth(message.from_user)
+		Options = self.__Panel.load_options_for_user(User)
+		if not Options.is_open: return False
 
-			if message.text in ModeratorsStorage.get_names():
-				Index = ModeratorsStorage.get_index_by_name(message.text)
-				Options.remember_moderator_index(Index)
-				ReplyFunctions.ShowModerationCategory(bot, users, message, message.text)
-				IsReplyButton = True
+		if Options.current_module:
+			ModuleObject: "BaseModule" = self.__Panel.get_module_object(Options.current_module)
+			ModuleObject.process_message(message)
+			return True
 
-			if IsReplyButton: return True
+		Layer = self.__Panel.tree.get_layer_by_path(Options.path) if Options.path else self.__Panel.tree.data
 
-		if not User.expected_type or not User.expected_type.startswith("ap_"): return False
+		for Element in Layer:
+			if message.text == Element:
 
-		if User.expected_type == UserInput.Message.value:
-			Options.mailing.set_caption(message.html_text)
-			Options.save()
+				if type(Layer[Element]) == dict:
+					Options.path.append(Element)
 
-		elif User.expected_type == UserInput.ButtonLabel.value:
-			Options["button_label"] = message.text
-			User.set_property("ap", Options)
-			User.set_expected_type(UserInput.ButtonLink.value)
-			bot.send_message(
-				chat_id = message.chat.id,
-				text = "Отправьте ссылку, которая будет помещена в кнопку.",
-				reply_markup = ReplyKeyboards.cancel()
-			)
-		
-		elif User.expected_type == UserInput.ButtonLink.value:
-			Options["button_link"] = message.text
-			User.set_property("ap", Options)
-			User.set_expected_type(None)
-			bot.send_message(
-				chat_id = message.chat.id,
-				text = "Кнопка прикреплена к сообщению.",
-				reply_markup = MailingReplyKeyboards.mailing(User)
-			)
-		
-		elif User.expected_type == UserInput.Username.value:
-			Username = message.text.lstrip("@")
-			if Username.startswith("https://t.me/"): Username = Username[len("https://t.me/"):]
-
-			Options.mailing.set_sampling(Username)
-			User.set_expected_type(None)
-			bot.send_message(
-				chat_id = message.chat.id,
-				text = "Никнейм сохранён.",
-				reply_markup = MailingReplyKeyboards.mailing(User)
-			)
-
-		elif User.expected_type == UserInput.EditedText.value:
-			Options.set_edited_text(message.text)
-			User.reset_expected_type()
-			RunModerator(bot, User, message, Options.moderator_index)
+				else:
+					Options.set_current_module(Layer[Element].__name__)
+					self.__Panel.get_module_object(Options.current_module).open(User)
 
 		return True
-
-	def files(self, bot: TeleBot, user: UserData = None, message: types.Message = None):
-		"""
-		Набор процедур: файлы.
-			bot – экземпляр бота;\n
-			message – сообщение;\n
-			user – пользователь.
-		"""
-
-		if user.has_permissions("admin") and user.expected_type == UserInput.Message.value:
-			Options = OptionsStruct(user)
-			if message.caption: Options.mailing.set_caption(message.html_caption)
-			if message.content_type == "audio": Options.mailing.add_attachment("audio", message.audio.file_id)
-			elif message.content_type == "document": Options.mailing.add_attachment("document", message.document.file_id)
-			elif message.content_type == "video": Options.mailing.add_attachment("video", message.video.file_id)
-			elif message.content_type == "photo": Options.mailing.add_attachment("photo", message.photo[-1].file_id)
-			elif message.content_type == "animation": Options.mailing.add_attachment("animation", message.animation.file_id)
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -297,13 +108,49 @@ class Panel:
 	#==========================================================================================#
 
 	@property
+	def bot(self) -> TeleBot:
+		"""Бот Telegram."""
+
+		return self.__Bot
+
+	@property
 	def close_callback(self) -> Callable | None:
 		"""Функция, вызываемая при закрытии панели администрирования."""
 
 		return self.__CloseCallback
 	
+	@property
+	def master_bot(self) -> TeleMaster:
+		"""Набор дополнительного функционала для бота Telegram."""
+
+		return self.__Master
+
+	@property
+	def password(self) -> str:
+		"""Пароль для доступа в панель управления."""
+
+		return self.__Password
+	
+	@property
+	def tree(self) -> Tree:
+		"""Древо навигации по модулям."""
+
+		return self.__Tree
+
+	@property
+	def users_manager(self) -> "UsersManager":
+		"""Менеджер пользователей."""
+
+		return self.__UsersManager
+
+	@property
+	def workdir(self) -> PathLike:
+		"""Каталог для хранения файлов панели управления."""
+
+		return self.__WorkDirectory
+
 	#==========================================================================================#
-	# >>>>> КОНТЕЙНЕРЫ <<<<< #
+	# >>>>> КОНТЕЙНЕРЫ ОБРАБОТЧИКОВ ВЗАИМОДЕЙСТВИЙ <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -313,28 +160,63 @@ class Panel:
 		return self.__Decorators
 
 	@property
-	def keyboards(self) -> Keyboards:
-		"""Наборы разметок кнопок."""
-
-		return self.__Keyboards
-	
-	@property
-	def password(self) -> str:
-		"""Пароль для доступа в панель управления."""
-
-		return self.__Password
-
-	@property
 	def procedures(self) -> Procedures:
 		"""Наборы процедур."""
 
 		return self.__Procedures
 
 	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __BuilReplyMarkupForLayer(self, path: Path) -> types.ReplyKeyboardMarkup:
+		"""
+		Строит Reply-интерфейс для слоя древа по указанному пути.
+
+		:param path: Путь для построения.
+		:type path: Path
+		:return: Reply-интерфейс.
+		:rtype: types.ReplyKeyboardMarkup
+		"""
+
+		path = path.value
+		Layer = self.__Tree.get_layer_by_path(path) if path else self.__Tree.data
+		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
+		for Element in Layer: Menu.add(types.KeyboardButton(Element))
+
+		return Menu
+
+	def __GetModulesFromTree(self, tree: dict) -> list:
+		"""
+		Возвращает список модулей.
+
+		:param tree: Древо слоёв.
+		:type tree: dict
+		:return: Список модулей.
+		:rtype: list
+		"""
+
+		ModulesList = list()
+
+		for Element in tree.values():
+			if type(Element) == dict: ModulesList += self.__GetModulesFromTree(Element)
+			else: ModulesList.append(Element)
+
+		return ModulesList
+
+	def __InitializeModules(self):
+		"""Инициализирует модули древа."""
+
+		ModulesList = self.__GetModulesFromTree(self.__Tree.data)
+
+		for CurrentModule in ModulesList:
+			if CurrentModule.__name__ not in self.__Modules: self.__Modules[CurrentModule.__name__] = CurrentModule(self)
+
+	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, bot: TeleBot, users_manager: UsersManager, password: str):
+	def __init__(self, bot: TeleBot, users_manager: "UsersManager", password: str):
 		"""
 		Панель управления.
 
@@ -346,13 +228,113 @@ class Panel:
 		:type password: str
 		"""
 
+		self.__Bot = bot
+		self.__UsersManager = users_manager
 		self.__Password = password
 
-		self.__Decorators = Decorators(self, bot, users_manager)
-		self.__Keyboards = Keyboards()
+		self.__Master = TeleMaster(self.__Bot)
+		self.__Decorators = Decorators(self)
 		self.__Procedures = Procedures(self)
 
 		self.__CloseCallback: Callable | None = None
+		self.__Modules = dict()
+		self.__Tree = Tree()
+		self.__WorkDirectory = ".tbap"
+
+		if not os.path.exists(self.__WorkDirectory): os.makedirs(self.__WorkDirectory)
+
+	def close(self, user: "UserData"):
+		"""
+		Закрывает панель управления.
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		"""
+
+		Options: PanelOptions = user.get_object("ap_options")
+		Options.set_current_module(None)
+		Options.set_open_state(False)
+		if self.__CloseCallback: self.__CloseCallback()
+
+	def get_current_layer_reply_markup(self, user: "UserData") -> types.ReplyKeyboardMarkup:
+		"""
+		Возвращает Reply-интерфейс текущего слоя.
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		:return: Reply-интерфейс текущего слоя.
+		:rtype: types.ReplyKeyboardMarkup
+		"""
+
+		Options: PanelOptions = user.get_object("ap_options")
+
+		return self.__BuilReplyMarkupForLayer(Options.path)
+
+	def get_module_object(self, module: str) -> "BaseModule":
+		"""
+		Получает объект модуля.
+
+		:param module: Имя модуля.
+		:type module: str
+		:return: Объект модуля.
+		:rtype: BaseModule
+		"""
+
+		return self.__Modules[module]
+	
+	def get_module_workdir(self, module: str) -> PathLike:
+		"""
+		Получает каталог для хранения файлов модуля.
+
+		:param module: Имя модуля.
+		:type module: str
+		:return: Путь к каталогу.
+		:rtype: PathLike
+		"""
+
+		Path = f"{self.__WorkDirectory}/{module}"
+		if not os.path.exists(Path): os.makedirs(Path)
+
+		return Path
+
+	def load_options_for_user(self, user: "UserData") -> PanelOptions:
+		"""
+		Загружает параметры панели управления в объекты пользователя под ключом _ap_options_.
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		:return: Параметры панели управления.
+		:rtype: PanelOptions
+		"""
+
+		try:
+			return user.get_object("ap_options")
+		
+		except KeyError:
+			Options = PanelOptions(user)
+			user.attach_object("ap_options", Options)
+			return user.get_object("ap_options")
+
+	def open(self, user: "UserData", text: str):
+		"""
+		Открывает панель управления.
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		:param text: Текст сообщения об открытии панели. Поддерживает HTML-разметку.
+		:type text: str
+		"""
+
+		Options = self.load_options_for_user(user)
+		Options.set_open_state(True)
+		Options.set_current_module(None)
+
+		self.__Bot.send_message(
+			chat_id = user.id,
+			text = text,
+			parse_mode = "HTML",
+			reply_markup = self.__BuilReplyMarkupForLayer(Options.path)
+		)
 
 	def set_close_callback(self, callback: Callable | None):
 		"""
@@ -363,3 +345,25 @@ class Panel:
 		"""
 
 		self.__CloseCallback = callback
+
+	def set_tree(self, tree: dict):
+		"""
+		Задаёт древо навигации.
+
+		:param tree: Древо навигации.
+		:type tree: dict
+		"""
+
+		self.__Tree.set(tree)
+		self.__InitializeModules()
+
+	def set_workdir(self, directory: PathLike):
+		"""
+		Задаёт каталог хранения файлов панели управления.
+
+		:param directory: Путь к каталогу.
+		:type directory: PathLike
+		"""
+
+		self.__WorkDirectory = directory
+		if not os.path.exists(self.__WorkDirectory): os.makedirs(self.__WorkDirectory)
