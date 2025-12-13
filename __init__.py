@@ -183,7 +183,7 @@ class Panel:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __BuilReplyMarkupForLayer(self, path: Path) -> types.ReplyKeyboardMarkup:
+	def __BuilReplyMarkupForLayer(self, path: "Path") -> types.ReplyKeyboardMarkup:
 		"""
 		Строит Reply-интерфейс для слоя древа по указанному пути.
 
