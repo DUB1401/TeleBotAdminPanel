@@ -34,6 +34,9 @@ class BaseModule:
 		"""
 
 		self._Panel = panel
+		
+		self._Bot = self._Panel.bot
+		self._MasterBot = self._Panel.master_bot
 
 		self._PostInitMethod()
 

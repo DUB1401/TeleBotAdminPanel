@@ -76,3 +76,6 @@ def File(Message: types.Message):
 	# Если процедура сработала, прервать обработку.
 	if AdminPanel.procedures.files(Bot, User, Message): return
 ```
+
+## Стандартные модули
+Документация по каждому стандартному модулю доступна в их [каталогах](Modules).

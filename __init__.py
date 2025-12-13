@@ -96,8 +96,6 @@ class Procedures:
 			if message.text == Element:
 
 				if type(Layer[Element]) == dict:
-					# Не имплементировано.
-					#return
 					Options.path.append(Element)
 					self.__Bot.send_message(
 						chat_id = User.id,
