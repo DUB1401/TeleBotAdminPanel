@@ -268,7 +268,11 @@ class Panel:
 		"""
 
 		Options: PanelOptions = self.load_options_for_user(user)
-		Options.set_current_module(None)
+
+		if Options.current_module:
+			Module: BaseModule = self.get_module_object(Options.current_module)
+			Module.close(user)
+
 		Options.set_open_state(False)
 		if self.__CloseCallback: self.__CloseCallback(user, self.__CallbackArguments)
 
