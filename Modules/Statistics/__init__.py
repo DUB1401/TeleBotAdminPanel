@@ -109,7 +109,7 @@ class SM_Statistics(BaseModule):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __SendStatistics(self, user: "UserData"):
+	def _SendStatistics(self, user: "UserData"):
 
 		UsersCount = len(self._Panel.users_manager.users)
 		BlockedUsersCount = 0
@@ -139,7 +139,7 @@ class SM_Statistics(BaseModule):
 			reply_markup = InlineKeyboards.Extract() 
 		)
 
-	def __GenerateFile(self, filename: str, users: list[UserData]):
+	def _GenerateFile(self, filename: str, users: list[UserData]):
 		"""
 		Генерирует файл выписки из статистики бота.
 
@@ -237,7 +237,7 @@ class SM_Statistics(BaseModule):
 			User = self._Panel.users_manager.auth(call.from_user)
 			Date = datetime.now().date().strftime("%d.%m.%Y")
 			Filename = self._Panel.get_module_workdir(SM_Statistics.__name__) + f"/{Date}.xlsx"
-			self.__GenerateFile(Filename, self._Panel.users_manager.users)
+			self._GenerateFile(Filename, self._Panel.users_manager.users)
 
 			try:
 				self._Panel.master_bot.safely_delete_messages(User.id, call.message.id)
@@ -262,5 +262,5 @@ class SM_Statistics(BaseModule):
 		User = self._Panel.users_manager.auth(message.from_user)
 
 		match message.text:
-			case "📊 Отобразить": self.__SendStatistics(User)
+			case "📊 Отобразить": self._SendStatistics(User)
 			case "↩️ Назад": self.close(User)
