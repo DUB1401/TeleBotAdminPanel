@@ -63,7 +63,7 @@ def Command(Message: types.Message):
 def Text(Message: types.Message):
 	User = Users.auth(Message.from_user)
 	# Если процедура сработала, прервать обработку.
-	if AdminPanel.procedures.text(Bot, Users, Message): return
+	if AdminPanel.procedures.text(Message): return
 
 # Поместить в секцию обработки Inline-кнопок бота.
 # Все Callback-запросы начинаются с "ap_".
@@ -74,7 +74,7 @@ AdminPanel.decorators.inline_keyboards()
 def File(Message: types.Message):
 	User = Users.auth(Message.from_user)
 	# Если процедура сработала, прервать обработку.
-	if AdminPanel.procedures.files(Bot, User, Message): return
+	if AdminPanel.procedures.files(Message): return
 ```
 
 ## Стандартные модули
