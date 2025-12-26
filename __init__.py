@@ -267,7 +267,7 @@ class Panel:
 		:type user: UserData
 		"""
 
-		Options: PanelOptions = user.get_object("ap_options")
+		Options: PanelOptions = self.load_options_for_user(user)
 		Options.set_current_module(None)
 		Options.set_open_state(False)
 		if self.__CloseCallback: self.__CloseCallback(user, self.__CallbackArguments)
