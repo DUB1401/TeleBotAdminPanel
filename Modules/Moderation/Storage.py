@@ -104,7 +104,7 @@ class Storage:
 		try:
 			Index = self.__Storage.index(content)
 			NewIndex = Index + offset
-			if NewIndex < 0 or NewIndex > len(self._Storage) - 1: return
+			if NewIndex < 0 or NewIndex > len(self.__Storage) - 1: return
 			return self.__Storage[NewIndex]
 		
 		except (ValueError, IndexError): pass
