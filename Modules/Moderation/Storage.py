@@ -48,7 +48,7 @@ class Storage:
 		StorageDirectory = self.__Panel.get_module_workdir("SM_Moderation") + "/storages"
 		StoragePath = f"{StorageDirectory}/{self.__ID}.json"
 		os.makedirs(StorageDirectory, exist_ok = True)
-		if os.path.exists(StoragePath): self._Storage = ReadJSON(StoragePath)
+		if os.path.exists(StoragePath): self.__Storage = ReadJSON(StoragePath)
 
 		return StoragePath
 	
