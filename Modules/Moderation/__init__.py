@@ -118,7 +118,13 @@ class SM_Moderation(BaseModule):
 			ModuleData.set_value(Element)
 			
 			if ModuleData.canvas_id:
-				self._Panel.bot.edit_message_text(Element, User.id, ModuleData.canvas_id, reply_markup = InlineKeyboards.View())
+				self._Panel.bot.edit_message_text(
+					text = Element,
+					chat_id = User.id,
+					message_id = ModuleData.canvas_id,
+					parse_mode = "HTML",
+					reply_markup = InlineKeyboards.View()
+				)
 
 			else:
 				self._Panel.master_bot.safely_delete_messages(User.id, call.message.id)
@@ -134,7 +140,13 @@ class SM_Moderation(BaseModule):
 			ModuleData.set_value(Element)
 
 			if ModuleData.canvas_id:
-				self._Panel.bot.edit_message_text(Element, User.id, ModuleData.canvas_id, reply_markup = InlineKeyboards.View())
+				self._Panel.bot.edit_message_text(
+					text = Element,
+					chat_id = User.id,
+					message_id = ModuleData.canvas_id,
+					parse_mode = "HTML",
+					reply_markup = InlineKeyboards.View()
+				)
 
 			else:
 				self._Panel.master_bot.safely_delete_messages(User.id, call.message.id)
