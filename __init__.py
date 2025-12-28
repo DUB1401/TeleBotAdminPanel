@@ -259,6 +259,23 @@ class Panel:
 
 		if not os.path.exists(self.__WorkDirectory): os.makedirs(self.__WorkDirectory)
 
+	def login(self, user: "UserData", password: str | None = None) -> bool:
+		"""
+		Проверяет, имеет ли пользователь доступ к панели управления. При передаче пароля выполняет авторизацию (выдаётся разрешение _ap_access_, при наличии которого повторный ввод пароля не требуется).
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		:param password: Введённый пользователем пароль.
+		:type password: str
+		:return: Возвращает `True`, если доступ разрешён.
+		:rtype: bool
+		"""
+
+		if not user.has_permissions("ap_access") and password:
+			if password == self.__Password: user.add_permissions("ap_access")
+
+		return user.has_permissions("ap_access")
+
 	def close(self, user: "UserData"):
 		"""
 		Закрывает панель управления.
@@ -335,27 +352,22 @@ class Panel:
 			user.attach_object("ap_options", Options)
 			return user.get_object("ap_options")
 
-	def open(self, user: "UserData", text: str):
+	def open(self, user: "UserData") -> types.ReplyKeyboardMarkup | None:
 		"""
-		Открывает панель управления.
+		Выполняет авторизацию пользователя и открывает панель управления. При верном пароле .
 
 		:param user: Данные пользователя.
 		:type user: UserData
-		:param text: Текст сообщения об открытии панели. Поддерживает HTML-разметку.
-		:type text: str
+		:return: Reply-интерфейс корня панели управления или `None` при отсутствии доступа.
+		:rtype: types.ReplyKeyboardMarkup | None
 		"""
-
-		Options: PanelOptions = self.load_options_for_user(user)
-		Options.set_open_state(True)
-		Options.set_current_module(None)
-
-		self.__Bot.send_message(
-			chat_id = user.id,
-			text = text,
-			parse_mode = "HTML",
-			reply_markup = self.__BuilReplyMarkupForLayer(Options.path)
-		)
-
+		
+		if user.has_permissions("ap_access"):
+			Options: PanelOptions = self.load_options_for_user(user)
+			Options.set_open_state(True)
+			Options.set_current_module(None)
+			return self.__BuilReplyMarkupForLayer(Options.path)
+		
 	def set_close_callback(self, callback: Callable | None, args: tuple | None = None):
 		"""
 		Задаёт Callback-функцию, вызываемую при закрытии панели.
