@@ -1,6 +1,6 @@
 from ..Core.PanelOptions import PanelOptions
 
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from telebot import types
 
@@ -13,8 +13,20 @@ class BaseModule:
 	"""Базовый модуль панели управления."""
 
 	#==========================================================================================#
-	# >>>>> ЗАЩИЩЁННЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def _GetModuleData(self, user: "UserData") -> dict[str, Any]:
+		"""
+		Возвращает данные модуля для конкретного пользователя.
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		:return: Данные модуля.
+		:rtype: dict[str, Any]
+		"""
+
+		return self._Panel.load_options_for_user(user).get_module_data(self.__class__.__name__)
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
@@ -57,6 +69,16 @@ class BaseModule:
 
 		:param user: Данные пользователя.
 		:type user: UserData
+		"""
+
+		pass
+
+	def process_attachment(self, message: types.Message):
+		"""
+		Обрабатывает сообщение с вложением от пользователя.
+
+		:param message: Сообщение с вложением.
+		:type message: types.Message
 		"""
 
 		pass

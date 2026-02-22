@@ -63,6 +63,26 @@ class Procedures:
 		self.__UsersManager = self.__Panel.users_manager
 		self.__Bot = self.__Panel.bot
 
+	def attachments(self, message: types.Message) -> bool:
+		"""
+		Обрабатывает сообщение с вложением.
+
+		:param message: Данные сообщения.
+		:type message: types.Message
+		:return: Возвращает `True`, если сообщение предназначалось для обработки панелью.
+		:rtype: bool
+		"""
+
+		User = self.__UsersManager.auth(message.from_user)
+		Options = self.__Panel.load_options_for_user(User)
+		if not Options.is_open: return False
+
+		if Options.current_module:
+			ModuleObject: "BaseModule" = self.__Panel.get_module_object(Options.current_module)
+			ModuleObject.process_attachment(message)
+
+		return True
+
 	def text(self, message: types.Message) -> bool:
 		"""
 		Обрабатывает сообщение.

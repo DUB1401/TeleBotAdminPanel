@@ -23,6 +23,7 @@ Flag.switch()
 if Flag: print(Flag.id)
 
 # В других модулях проекта обращение к флагам возможно через статический атрибут.
-from TeleBotAdminPanel.Modules.Switcher import SM_Switcher
-Flag = SM_Switcher.SWITCHERS["subscription"]
+from TeleBotAdminPanel.Modules.Switchers import SM_Switchers
+# Получение флага из статического атрибута.
+Flag = SM_Switchers.SWITCHERS["subscription"]
 ```
