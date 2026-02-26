@@ -256,9 +256,7 @@ class SM_Mailing(BaseModule):
 		AttachmentsCount = len(Attachments)
 		MessageID = None
 
-		if not Attachments and not data.text:
-			self._Bot.send_message(user.id, "Вы не задали сообщение.")
-			return
+		if not Attachments and not data.text: return
 
 		SendMethods = {
 			"animation": self._Bot.send_animation,
@@ -483,6 +481,22 @@ class SM_Mailing(BaseModule):
 		data.set_action(None)
 		self._Bot.send_message(chat_id = user.id, text = "Рассылка завершена.", reply_markup = ReplyKeyboards.Start(data))
 
+	def __ViewMessage(self, user: "UserData", data: MailingData):
+		"""
+		Отправляет сообщение для предварительного просмотра.
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		:param data: Данные модуля рассылки.
+		:type data: MailingData
+		"""
+
+		if not data.attachments and not data.text:
+			self._Bot.send_message(user.id, "Вы не задали сообщение.")
+			return
+		
+		self.__SendMessage(user, data)
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -648,7 +662,7 @@ class SM_Mailing(BaseModule):
 			case "🟢 Запустить": self.__StartMailing(User, ModuleData)
 			case "🟢 Возобновить": self.__ResumeMailing(User, ModuleData)
 
-			case "🔎 Просмотр": self.__SendMessage(User, ModuleData)
+			case "🔎 Просмотр": self.__ViewMessage(User, ModuleData)
 			case "💾 Сохранить": self.__SaveMessage(User, ModuleData)
 			case "✏️ Редактировать": self.__EditMessage(User, ModuleData)
 			case "🕹️ Добавить кнопку": self.__AddButton(User)
