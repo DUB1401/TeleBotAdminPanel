@@ -255,9 +255,7 @@ class SM_Mailing(BaseModule):
 		UnsendedUsersBuffer = list()
 
 		for CurrentUser in self._Panel.users_manager.users:
-			try: 
-				if not CurrentUser.get_property(ProgressKey): UnsendedUsersBuffer.append(CurrentUser)
-			except KeyError: UnsendedUsersBuffer.append(CurrentUser)
+			if not CurrentUser.has_property(ProgressKey) or self.__RetrySendAfterResume and not CurrentUser.get_property(ProgressKey): UnsendedUsersBuffer.append(CurrentUser)
 
 		return tuple(UnsendedUsersBuffer)
 
@@ -270,6 +268,8 @@ class SM_Mailing(BaseModule):
 		:type user: UserData
 		:param data: Данные модуля рассылки.
 		:type data: MailingData
+		:return: ID сообщения (для медиагруппы ID последнего сообщения группы) или `None` при ошибке.
+		:rtype: int | None
 		"""
 
 		Attachments = data.attachments
@@ -287,7 +287,7 @@ class SM_Mailing(BaseModule):
 		}
 
 		if AttachmentsCount > 1:
-			MessageID = self._Bot.send_media_group(user.id, data.media_group).id
+			MessageID = self._Bot.send_media_group(user.id, data.media_group)[-1].id
 
 		elif AttachmentsCount == 1:
 				Attachment = data.attachments[0]
@@ -570,7 +570,8 @@ class SM_Mailing(BaseModule):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self.__Delay = 1.0
+		self.__Delay = 3.0
+		self.__RetrySendAfterResume = False
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
