@@ -490,7 +490,7 @@ class SM_Mailing(BaseModule):
 		data.set_action(Actions.Mailing)
 		Users = self.__GetUnsendedUsers(user)
 		TotalUsersCount = len(self._Panel.users_manager.users)
-		ProcessedUsersCount = len(Users)
+		ProcessedUsersCount = TotalUsersCount - len(Users)
 
 		self._Bot.send_message(chat_id = user.id, text = "Начата рассылка", reply_markup = ReplyKeyboards.Start(data))
 		ProgressMessageID = self._Bot.send_message(
