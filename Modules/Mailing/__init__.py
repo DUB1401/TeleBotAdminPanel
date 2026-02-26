@@ -241,6 +241,25 @@ class SM_Mailing(BaseModule):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def __GetUnsendedUsers(self, sender: "UserData") -> "tuple[UserData]":
+		"""
+		Возвращает последовательность пользователей, не получивших текущую рассылку.
+
+		:param sender: Данные отправителя.
+		:type sender: UserData
+		:return: Набор данных пользователей, не получивших сообщение рассылки.
+		:rtype: tuple[UserData]
+		"""
+
+		ProgressKey = f"ap_mailing_by_{sender.id}"
+		UnsendedUsersBuffer = list()
+
+		for CurrentUser in self._Panel.users_manager.users:
+			if CurrentUser.get_property(ProgressKey):ProcessedUsersCount += 1
+			else: UnsendedUsersBuffer.append(CurrentUser)
+
+		return tuple(UnsendedUsersBuffer)
+
 	@ignore_frecuency_errors
 	def __SendMessage(self, user: "UserData", data: MailingData) -> int | None:
 		"""
@@ -348,6 +367,23 @@ class SM_Mailing(BaseModule):
 			reply_markup = InlineKeyboards.Cancel()
 		)
 
+	def __CancelMailing(self, user: "UserData", data: MailingData):
+		"""
+		Приостанавливает рассылку.
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		:param data: Данные модуля рассылки.
+		:type data: MailingData
+		"""
+
+		data.set_action(Actions.CancelMailing)
+		self._Bot.send_message(
+			chat_id = user.id,
+			text = "Сигнал отмены рассылки отправлен. Новая рассылка затронет всех пользователей.",
+			reply_markup = ReplyKeyboards.Start(data)
+		)
+
 	def __EditMessage(self, user: "UserData", data: MailingData):
 		"""
 		Запускает процедуру редактирования сообщения.
@@ -368,6 +404,23 @@ class SM_Mailing(BaseModule):
 			chat_id = user.id,
 			text = "Отправьте ваше сообщение, после чего нажмите кнопку ниже.",
 			reply_markup = ReplyKeyboards.Save()
+		)
+
+	def __PauseMailing(self, user: "UserData", data: MailingData):
+		"""
+		Приостанавливает рассылку.
+
+		:param user: Данные пользователя.
+		:type user: UserData
+		:param data: Данные модуля рассылки.
+		:type data: MailingData
+		"""
+
+		data.set_action(Actions.StopMailing)
+		self._Bot.send_message(
+			chat_id = user.id,
+			text = "Сигнал остановки рассылки отправлен.",
+			reply_markup = ReplyKeyboards.Start(data)
 		)
 
 	def __RemoveButton(self, user: "UserData"):
@@ -394,7 +447,7 @@ class SM_Mailing(BaseModule):
 
 		Text = (
 			"Нажимая <b>Продолжить</b> вы возобновляете рассылку для тех пользователей, что её ещё не получили.",
-			"Если вы редактировали сообщение, пользователи получат его новую версию."
+			"Если вы редактировали сообщение, оставшиеся пользователи получат его новую версию."
 		)
 
 		self._Bot.send_message(
@@ -433,9 +486,9 @@ class SM_Mailing(BaseModule):
 
 		ProgressKey = f"ap_mailing_by_{user.id}"
 		data.set_action(Actions.Mailing)
-		Users = self._Panel.users_manager.users
-		TotalUsersCount = len(Users)
-		ProcessedUsersCount = 0
+		Users = self.__GetUnsendedUsers(user)
+		TotalUsersCount = len(self._Panel.users_manager.users)
+		ProcessedUsersCount = len(Users)
 
 		self._Bot.send_message(chat_id = user.id, text = "Начата рассылка", reply_markup = ReplyKeyboards.Start(data))
 		ProgressMessageID = self._Bot.send_message(
@@ -657,8 +710,8 @@ class SM_Mailing(BaseModule):
 		#---> Обработка Reply-кнопок.
 		#==========================================================================================#
 		match message.text:
-			case "🔴 Отменить": ModuleData.set_action(Actions.CancelMailing)
-			case "🟡 Приостановить": ModuleData.set_action(Actions.StopMailing)
+			case "🔴 Отменить": self.__CancelMailing(User, ModuleData)
+			case "🟡 Приостановить": self.__PauseMailing(User, ModuleData)
 			case "🟢 Запустить": self.__StartMailing(User, ModuleData)
 			case "🟢 Возобновить": self.__ResumeMailing(User, ModuleData)
 
