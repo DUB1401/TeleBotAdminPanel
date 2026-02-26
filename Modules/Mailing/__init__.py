@@ -256,8 +256,7 @@ class SM_Mailing(BaseModule):
 
 		for CurrentUser in self._Panel.users_manager.users:
 			try: 
-				if CurrentUser.get_property(ProgressKey): ProcessedUsersCount += 1
-				else: UnsendedUsersBuffer.append(CurrentUser)
+				if not CurrentUser.get_property(ProgressKey): UnsendedUsersBuffer.append(CurrentUser)
 			except KeyError: UnsendedUsersBuffer.append(CurrentUser)
 
 		return tuple(UnsendedUsersBuffer)
