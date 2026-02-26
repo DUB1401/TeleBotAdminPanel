@@ -10,7 +10,6 @@ from types import MappingProxyType
 from time import sleep
 
 from telebot import types, apihelper
-from uuid6 import uuid7
 
 if TYPE_CHECKING:
 	from ... import Panel
@@ -503,7 +502,7 @@ class SM_Mailing(BaseModule):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self.__Delay = 0.5
+		self.__Delay = 1.0
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

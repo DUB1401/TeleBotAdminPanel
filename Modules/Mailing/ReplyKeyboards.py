@@ -35,8 +35,11 @@ def Start(module_data: "MailingData") -> types.ReplyKeyboardMarkup:
 	
 	Menu.add(types.KeyboardButton(Status))
 	Menu.add(types.KeyboardButton("🔎 Просмотр"))
-	Menu.add(types.KeyboardButton("✏️ Редактировать"))
-	Menu.add(types.KeyboardButton(f"🕹️ {ButtonText} кнопку"))
+
+	if module_data.action != Actions.Mailing: 
+		Menu.add(types.KeyboardButton("✏️ Редактировать"))
+		Menu.add(types.KeyboardButton(f"🕹️ {ButtonText} кнопку"))
+		
 	Menu.add(types.KeyboardButton("↩️ Назад"))
 
 	return Menu
