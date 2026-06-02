@@ -1,2 +1,2 @@
-dublib[telebot]>=0.24.3,<0.26.0
+dublib[telebot]>=0.24.3,<0.28.0
 XlsxWriter
